@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd $LAMBDA_TASK_ROOT
+/opt/bb -cp $LAMBDA_TASK_ROOT /opt/bootstrap.clj

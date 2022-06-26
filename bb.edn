@@ -1,0 +1,38 @@
+{:tasks
+ {:init (do
+          (def default-bb-version "0.8.156")
+          (def default-bb-platform "linux-amd64-static")
+          (def layer-zipfile "target/bb.zip"))
+  :requires ([babashka.fs :as fs])
+  help {:doc "Displays default Babashka version and platform"
+        :task (println (str "Run `bb tasks` to list all of the tasks.\n"
+                            "Default Babashka version and platform: "
+                            default-bb-version " " default-bb-platform))}
+  clean {:doc "Removes work and target folders."
+         :task (do
+                 (when (fs/exists? "bb")
+                   (fs/delete "bb"))
+                 (doseq [dir ["target" ".work"]]
+                   (fs/delete-tree dir)))}
+  build-runtime {:doc "Builds custom runtime layer. You may specify a platform and version for Babashka to override the defaults."
+                 :requires ([babashka.curl :as curl]
+                            [clojure.java.io :as io])
+                 :task (let [[bb-version bb-platform] *command-line-args*
+                             bb-version (or bb-version default-bb-version)
+                             bb-platform (or bb-platform default-bb-platform)
+                             bb-url (format "https://github.com/babashka/babashka/releases/download/v%s/babashka-%s-%s.tar.gz"
+                                            bb-version bb-version bb-platform)
+                             bb-tarball (format ".work/babashka-%s-%s.tar.gz"
+                                                bb-version bb-version bb-platform)]
+                         (doseq [dir ["target" ".work"]]
+                           (fs/create-dirs dir))
+                         (when-not (fs/exists? bb-tarball)
+                           (println "Downloading" bb-url)
+                           (io/copy
+                            (:body (curl/get bb-url {:as :bytes}))
+                            (io/file bb-tarball)))
+                         (println "Decompressing" bb-tarball)
+                         (shell (str "tar -xzf " bb-tarball))
+                         (println "Compressing custom runtime layer:" layer-zipfile)
+                         (fs/zip layer-zipfile
+                                 ["bb" "bootstrap" "bootstrap.clj"]))}}}
