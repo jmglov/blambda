@@ -4,16 +4,21 @@
           (def target-dir "target")
           (def default-bb-version "0.8.156")
           (def default-bb-platform "linux-amd64-static")
+          (def default-layer-name "blambda")
           (def layer-zipfile (str (-> (fs/file target-dir) .getAbsolutePath)
                                   "/bb.zip")))
   :requires ([babashka.fs :as fs])
+
   help {:doc "Displays default Babashka version and platform"
         :task (println (str "Run `bb tasks` to list all of the tasks.\n"
                             "Default Babashka version and platform: "
-                            default-bb-version " " default-bb-platform))}
+                            default-bb-version " " default-bb-platform "\n"
+                            "Default layer name: " default-layer-name))}
+
   clean {:doc "Removes work and target folders."
          :task (doseq [dir [target-dir work-dir]]
                  (fs/delete-tree dir))}
+
   build {:doc "Builds custom runtime layer. You may specify a platform and version for Babashka to override the defaults."
          :requires ([babashka.curl :as curl]
                     [clojure.java.io :as io]
@@ -48,4 +53,15 @@
                            "bb" "bootstrap" "bootstrap.clj"
                            :dir work-dir)]
                    (when (not= 0 exit)
-                     (println "Error:" err))))}}}
+                     (println "Error:" err))))}
+
+  cli-deploy {:doc "Deploys custom runtime layer using the AWS CLI (v1). You may specify a layer name to override the default"
+              :depends [build]
+              :task (let [[layer-name] *command-line-args*
+                          layer-name (or layer-name default-layer-name)
+                          cmd (str "aws lambda publish-layer-version"
+                            " --layer-name " layer-name
+                            " --zip-file fileb://" layer-zipfile
+                            " --compatible-runtimes provided")]
+                      (println cmd)
+                      (shell cmd))}}}
