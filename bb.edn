@@ -1,35 +1,28 @@
-{:tasks
- {:init (do
-          (def work-dir ".work")
-          (def target-dir "target")
-          (def default-bb-version "0.8.156")
-          (def default-bb-platform "linux-amd64-static")
-          (def default-layer-name "blambda")
-          (def layer-zipfile (str (-> (fs/file target-dir) .getAbsolutePath)
-                                  "/bb.zip")))
-  :requires ([babashka.fs :as fs])
+{:paths ["."]
+ :pods {org.babashka/aws {:version "0.1.2"}}
+ :tasks
+ {:requires ([babashka.fs :as fs]
+             [task-helper :as th])
 
-  help {:doc "Displays default Babashka version and platform"
-        :task (println (str "Run `bb tasks` to list all of the tasks.\n"
-                            "Default Babashka version and platform: "
-                            default-bb-version " " default-bb-platform "\n"
-                            "Default layer name: " default-layer-name))}
+  help {:doc "Displays command line options"
+        :task (do
+                (th/help))}
 
   clean {:doc "Removes work and target folders."
-         :task (doseq [dir [target-dir work-dir]]
-                 (fs/delete-tree dir))}
+         :task (let [{:keys [target-dir work-dir]} (th/parse-args)]
+                 (doseq [dir [target-dir work-dir]]
+                   (println "Removing directory:" dir)
+                   (fs/delete-tree dir)))}
 
-  build {:doc "Builds custom runtime layer. You may specify a platform and version for Babashka to override the defaults."
+  build {:doc "Builds custom runtime layer."
          :requires ([babashka.curl :as curl]
                     [clojure.java.io :as io]
                     [clojure.java.shell :refer [sh]])
-         :task (let [[bb-version bb-platform] *command-line-args*
-                     bb-version (or bb-version default-bb-version)
-                     bb-platform (or bb-platform default-bb-platform)
-                     bb-url (format "https://github.com/babashka/babashka/releases/download/v%s/babashka-%s-%s.tar.gz"
-                                    bb-version bb-version bb-platform)
-                     bb-tarball (format "%s/babashka-%s-%s.tar.gz"
-                                        work-dir bb-version bb-version bb-platform)]
+         :task (let [{:keys [bb-arch bb-version target-dir work-dir]} (th/parse-args)
+                     layer-zipfile (th/layer-zipfile target-dir)
+                     bb-filename (th/bb-filename bb-version bb-arch)
+                     bb-url (th/bb-url bb-version bb-filename)
+                     bb-tarball (format "%s/%s" work-dir bb-filename)]
                  (doseq [dir [target-dir work-dir]]
                    (fs/create-dirs dir))
 
@@ -55,13 +48,24 @@
                    (when (not= 0 exit)
                      (println "Error:" err))))}
 
-  cli-deploy {:doc "Deploys custom runtime layer using the AWS CLI (v1). You may specify a layer name to override the default"
-              :depends [build]
-              :task (let [[layer-name] *command-line-args*
-                          layer-name (or layer-name default-layer-name)
-                          cmd (str "aws lambda publish-layer-version"
-                            " --layer-name " layer-name
-                            " --zip-file fileb://" layer-zipfile
-                            " --compatible-runtimes provided")]
-                      (println cmd)
-                      (shell cmd))}}}
+  deploy {:doc "Deploys custom runtime layer using babashka-aws."
+          :depends [build]
+          :requires ([pod.babashka.aws :as aws])
+          :task (let [{:keys [bb-arch layer-name aws-region target-dir]} (th/parse-args)
+                      layer-zipfile (th/layer-zipfile target-dir)
+                      lambda-arch (if (= "amd64" bb-arch) "x86_64" "arm64")
+                      runtimes (concat ["provided.al2"]
+                                       (when (= "amd64" bb-arch)
+                                         ["provided"]))
+                      client (aws/client {:api :lambda
+                                          :region aws-region})
+                      zipfile (fs/read-all-bytes layer-zipfile)
+                      _ (println "Publishing layer version for layer" layer-name)
+                      res (aws/invoke client {:op :PublishLayerVersion
+                                              :request {:LayerName layer-name
+                                                        :Content {:ZipFile zipfile}
+                                                        :CompatibleRuntimes runtimes
+                                                        :CompatibleArchitectures [lambda-arch]}})]
+                  (if (:cognitect.anomalies/category res)
+                    (prn "Error:" res)
+                    (println "Published layer" (:LayerVersionArn res))))}}}

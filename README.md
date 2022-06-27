@@ -14,7 +14,7 @@ which I think are simpler (but maybe not easier).
 To build Blambda! with the default Babashka version and platform, run:
 
 ``` sh
-bb build-runtime
+bb build
 ```
 
 To see what the default Babashka version and platform are, run:
@@ -23,10 +23,10 @@ To see what the default Babashka version and platform are, run:
 bb help
 ```
 
-To build a custom runtime with Babashka 0.8.2 on linux-aarch64, run:
+To build a custom runtime with Babashka 0.8.2 on amd64, run:
 
 ``` sh
-bb build-runtime 0.8.2 linux-aarch64
+bb build --bb-version 0.8.2 --bb-arch arm64
 ```
 
 To see what else you can do, run:
@@ -35,9 +35,35 @@ To see what else you can do, run:
 bb tasks
 ```
 
+To see what command-line arguments are available, run:
+
+``` sh
+bb help
+```
+
+## Deploying
+
+To deploy a custom runtime layer, run:
+
+``` sh
+bb deploy
+```
+
+To deploy an arm64 runtime so that you can use [AWS Graviton 2
+lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-arm-based-aws-graviton2-processors/)
+(which AWS say will give you up to "34%" better price performance), run:
+
+``` sh
+bb deploy --bb-arch arm64
+```
+
+Note that if you do this, you must configure your lambda as follows:
+- Runtime: Custom runtime on Amazon Linux 2
+- Architecture: arm64
+
 ## Using Blambda!
 
-I'm planning on adding tasks for deploying layers and functions, but for now,
+I'm planning on adding examples tasks for deploying layers functions, but for now,
 you can do it the hard way with the AWS CLI.
 
 ### AWS CLI
@@ -49,17 +75,7 @@ installed.
 To create or update a layer:
 
 ``` sh
-bb build-runtime
-aws lambda publish-layer-version \
-  --layer-name blambda \
-  --zip-file fileb://target/bb.zip \
-  --compatible-runtimes provided
-```
-
-Make sure it exists:
-
-``` sh
-aws lambda list-layer-versions --layer-name blambda
+bb deploy
 ```
 
 Assuming you're standing in the root of the Blambda! repo, you will have an
@@ -78,8 +94,7 @@ like this:
 You can create a function that uses Blambda! like this:
 
 ``` sh
-# Set this to the value of `Content.LayerVersionArn` from the output of the
-# publish-layer-version command
+# The ARN will be printed by the `bb deploy` command
 layer_arn=arn:aws:lambda:eu-west-1:123456789100:layer:blambda:1
 
 cd example
