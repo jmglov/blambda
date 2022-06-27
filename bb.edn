@@ -1,38 +1,51 @@
 {:tasks
  {:init (do
+          (def work-dir ".work")
+          (def target-dir "target")
           (def default-bb-version "0.8.156")
           (def default-bb-platform "linux-amd64-static")
-          (def layer-zipfile "target/bb.zip"))
+          (def layer-zipfile (str (-> (fs/file target-dir) .getAbsolutePath)
+                                  "/bb.zip")))
   :requires ([babashka.fs :as fs])
   help {:doc "Displays default Babashka version and platform"
         :task (println (str "Run `bb tasks` to list all of the tasks.\n"
                             "Default Babashka version and platform: "
                             default-bb-version " " default-bb-platform))}
   clean {:doc "Removes work and target folders."
-         :task (do
-                 (when (fs/exists? "bb")
-                   (fs/delete "bb"))
-                 (doseq [dir ["target" ".work"]]
-                   (fs/delete-tree dir)))}
-  build-runtime {:doc "Builds custom runtime layer. You may specify a platform and version for Babashka to override the defaults."
-                 :requires ([babashka.curl :as curl]
-                            [clojure.java.io :as io])
-                 :task (let [[bb-version bb-platform] *command-line-args*
-                             bb-version (or bb-version default-bb-version)
-                             bb-platform (or bb-platform default-bb-platform)
-                             bb-url (format "https://github.com/babashka/babashka/releases/download/v%s/babashka-%s-%s.tar.gz"
-                                            bb-version bb-version bb-platform)
-                             bb-tarball (format ".work/babashka-%s-%s.tar.gz"
-                                                bb-version bb-version bb-platform)]
-                         (doseq [dir ["target" ".work"]]
-                           (fs/create-dirs dir))
-                         (when-not (fs/exists? bb-tarball)
-                           (println "Downloading" bb-url)
-                           (io/copy
-                            (:body (curl/get bb-url {:as :bytes}))
-                            (io/file bb-tarball)))
-                         (println "Decompressing" bb-tarball)
-                         (shell (str "tar -xzf " bb-tarball))
-                         (println "Compressing custom runtime layer:" layer-zipfile)
-                         (fs/zip layer-zipfile
-                                 ["bb" "bootstrap" "bootstrap.clj"]))}}}
+         :task (doseq [dir [target-dir work-dir]]
+                 (fs/delete-tree dir))}
+  build {:doc "Builds custom runtime layer. You may specify a platform and version for Babashka to override the defaults."
+         :requires ([babashka.curl :as curl]
+                    [clojure.java.io :as io]
+                    [clojure.java.shell :refer [sh]])
+         :task (let [[bb-version bb-platform] *command-line-args*
+                     bb-version (or bb-version default-bb-version)
+                     bb-platform (or bb-platform default-bb-platform)
+                     bb-url (format "https://github.com/babashka/babashka/releases/download/v%s/babashka-%s-%s.tar.gz"
+                                    bb-version bb-version bb-platform)
+                     bb-tarball (format "%s/babashka-%s-%s.tar.gz"
+                                        work-dir bb-version bb-version bb-platform)]
+                 (doseq [dir [target-dir work-dir]]
+                   (fs/create-dirs dir))
+
+                 (when-not (fs/exists? bb-tarball)
+                   (println "Downloading" bb-url)
+                   (io/copy
+                    (:body (curl/get bb-url {:as :bytes}))
+                    (io/file bb-tarball)))
+
+                 (println "Decompressing" bb-tarball "to" work-dir)
+                 (shell (format "tar -C %s -xzf %s" work-dir bb-tarball))
+
+                 (doseq [f ["bootstrap" "bootstrap.clj"]]
+                   (println "Adding file" f)
+                   (fs/delete-if-exists (format "%s/%s" work-dir f))
+                   (fs/copy f work-dir))
+
+                 (println "Compressing custom runtime layer:" layer-zipfile)
+                 (let [{:keys [exit err]}
+                       (sh "zip" layer-zipfile
+                           "bb" "bootstrap" "bootstrap.clj"
+                           :dir work-dir)]
+                   (when (not= 0 exit)
+                     (println "Error:" err))))}}}
