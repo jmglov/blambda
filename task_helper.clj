@@ -65,5 +65,6 @@
             "linux-amd64-static")))
 
 (defn bb-url [bb-version filename]
-  (format "https://github.com/babashka/babashka/releases/download/v%s/%s"
+  (format "https://github.com/babashka/%s/releases/download/v%s/%s"
+          (if (string/includes? bb-version "SNAPSHOT") "babashka-dev-builds" "babashka")
           bb-version filename))
