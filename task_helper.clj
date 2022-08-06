@@ -6,7 +6,7 @@
   {:aws-region {:doc "AWS region"
                 :default (or (System/getenv "AWS_DEFAULT_REGION") "eu-west-1")}
    :bb-version {:doc "Babashka version"
-                :default "0.8.156"}
+                :default "0.9.161"}
    :bb-arch {:doc "Architecture to target"
              :default "amd64"
              :values ["amd64" "arm64"]}
