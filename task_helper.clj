@@ -10,6 +10,7 @@
    :bb-arch {:doc "Architecture to target"
              :default "amd64"
              :values ["amd64" "arm64"]}
+   :deps-path {:doc "Path to bb.edn or deps.edn containing lambda deps"}
    :layer-name {:doc "Name of custom runtime layer in AWS"
                 :default "blambda"}
    :target-dir {:doc "Build output directory"
@@ -52,6 +53,10 @@
                   [arg v])))
          (into {})
          (merge default-args))))
+
+(defn deps-zipfile [target-dir]
+  (str (-> (fs/file target-dir) .getAbsolutePath)
+       "/deps.zip"))
 
 (defn layer-zipfile [target-dir]
   (str (-> (fs/file target-dir) .getAbsolutePath)

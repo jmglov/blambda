@@ -48,6 +48,51 @@
                    (when (not= 0 exit)
                      (println "Error:" err))))}
 
+  build-deps {:docs "Builds a layer for dependencies"
+              :requires ([clojure.java.shell :refer [sh]]
+                         [clojure.edn :as edn]
+                         [clojure.string :as str]
+                         [babashka.deps :refer [clojure]])
+              :task (let [{:keys [deps-path target-dir work-dir]} (th/parse-args)
+                          deps-zipfile (th/deps-zipfile target-dir)]
+                      (when-not deps-path
+                        (th/error "Mising required argument: --deps-path"))
+
+                      (fs/create-dirs target-dir work-dir)
+
+                      (let [gitlibs-dir "gitlibs"
+                            m2-dir "m2-repo"
+                            deps (->> deps-path slurp edn/read-string :deps)]
+
+                        (spit (fs/file work-dir "deps.edn")
+                              {:deps deps
+                               :mvn/local-repo (str m2-dir)})
+
+                        (let [classpath-file (fs/file work-dir "deps-classpath")
+                              local-classpath-file (fs/file work-dir "deps-local-classpath")
+                              deps-base-dir (str (fs/path (fs/cwd) work-dir))
+                              classpath
+                              (with-out-str
+                                (clojure ["-Spath"]
+                                         {:dir work-dir
+                                          :env (assoc (into {} (System/getenv))
+                                                      "GITLIBS" (str gitlibs-dir))}))
+                              deps-classpath (str/replace classpath deps-base-dir "/opt")]
+                          (println "Classpath before transforming:" classpath)
+                          (println "Classpath after transforming:" deps-classpath)
+                          (spit classpath-file deps-classpath)
+                          (spit local-classpath-file classpath)
+
+                          (println "Compressing custom runtime layer:" deps-zipfile)
+                          (let [{:keys [exit err]}
+                                (sh "zip" "-r" deps-zipfile
+                                    (fs/file-name gitlibs-dir)
+                                    (fs/file-name m2-dir)
+                                    (fs/file-name classpath-file)
+                                    :dir work-dir)]
+                            (when (not= 0 exit)
+                              (println "Error:" err))))))}
+
   deploy {:doc "Deploys custom runtime layer using babashka-aws."
           :depends [build]
           :requires ([pod.babashka.aws :as aws])

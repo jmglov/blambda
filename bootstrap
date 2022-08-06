@@ -1,6 +1,27 @@
 #!/bin/sh
 
-export BABASHKA_PODS_DIR=/opt/.babashka/pods
+set -e
 
-cd $LAMBDA_TASK_ROOT
-/opt/bb -cp $LAMBDA_TASK_ROOT /opt/bootstrap.clj
+# For local debugging
+if [ -n "$LOCAL_LAYERS_DIR" ]; then
+  LAYERS_DIR=$LOCAL_LAYERS_DIR
+  DEPS_CLASSPATH_FILE="$LAYERS_DIR/deps-local-classpath"
+else
+  LAYERS_DIR=/opt
+  DEPS_CLASSPATH_FILE="$LAYERS_DIR/deps-classpath"
+fi
+
+
+CLASSPATH=$LAMBDA_TASK_ROOT
+if [ -e $DEPS_CLASSPATH_FILE ]; then
+  CLASSPATH="$CLASSPATH:`cat $DEPS_CLASSPATH_FILE`"
+fi
+
+export BABASHKA_DISABLE_SIGNAL_HANDLERS="true"
+export BABASHKA_PODS_DIR=$LAYERS_DIR/.babashka/pods
+export GITLIBS=$LAYERS_DIR/gitlibs
+
+echo "Starting Babashka:"
+echo "$LAYERS_DIR/bb -cp $CLASSPATH $LAYERS_DIR/bootstrap.clj"
+
+$LAYERS_DIR/bb -cp $CLASSPATH $LAYERS_DIR/bootstrap.clj
