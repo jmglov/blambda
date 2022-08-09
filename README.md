@@ -1,6 +1,6 @@
-# Blambda!
+# Blambda
 
-Blambda! is a custom runtime for AWS Lambda that lets you write functions using
+Blambda is a custom runtime for AWS Lambda that lets you write functions using
 Babashka. It is based on the fantastic work that [Tatu
 Tarvainen](https://github.com/tatut) did on taking care of the heavy lifting of
 interacting with the Lambda runtime API to process function invocations in
@@ -9,44 +9,61 @@ interacting with the Lambda runtime API to process function invocations in
 just rewritten the machinery around it to remove Docker in favour of zip files,
 which I think are simpler (but maybe not easier).
 
-## Building
+Blambda also owes a huge debt to Karol Wójcik's awesome [Holy
+Lambda](https://github.com/FieryCod/holy-lambda), which is a full-featured and
+production-grade runtime for Clojure on AWS Lambda. I've read a lot of Holy
+Lambda code to figure out how to do the complicated bits of Babashka-ing on
+lambda. 💜
 
-To build Blambda! with the default Babashka version and platform, run:
+## Using Blambda
+
+Blambda is meant to be used as a library from your Babashka project. The easiest
+way to use it is to add tasks to your project's `bb.edn`.
+
+This example assumes a basic `bb.edn` like this:
+
+``` clojure
+{:deps {net.jmglov/blambda
+        #_"You use the newest SHA here:"
+        {:git/sha "c253bf7d2b0bbbe3e53ad276b1c15c53b98d2088"}}
+ :tasks
+ {:requires ([blambda.api :as blambda]
+             [babashka.fs :as fs]
+             [task-helper :as th])
+
+  build-runtime-layer {:doc "Builds custom runtime"
+                       :task (blambda/build-runtime-layer)}
+
+  deploy-runtime-layer {:doc "Deploys custom runtime"
+                        :task (blambda/deploy-runtime-layer)}}}
+```
+
+### Building
+
+To build Blambda with the default Babashka version and platform, run:
 
 ``` sh
-bb build
+bb build-runtime-layer
 ```
 
 To see what the default Babashka version and platform are, run:
 
 ``` sh
-bb help
+bb build-runtime-layer --help
 ```
 
 To build a custom runtime with Babashka 0.8.2 on amd64, run:
 
 ``` sh
-bb build --bb-version 0.8.2 --bb-arch arm64
+bb build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
 ```
 
-To see what else you can do, run:
+### Deploying
+
+To deploy Blambda, run:
 
 ``` sh
-bb tasks
-```
-
-To see what command-line arguments are available, run:
-
-``` sh
-bb help
-```
-
-## Deploying
-
-To deploy a custom runtime layer, run:
-
-``` sh
-bb deploy
+bb deploy-runtime-layer
 ```
 
 To deploy an arm64 runtime so that you can use [AWS Graviton 2
@@ -54,17 +71,65 @@ lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-
 (which AWS say will give you up to "34%" better price performance), run:
 
 ``` sh
-bb deploy --bb-arch arm64
+bb build-runtime-layer --bb-arch arm64 && bb deploy-runtime-layer
 ```
 
 Note that if you do this, you must configure your lambda as follows:
 - Runtime: Custom runtime on Amazon Linux 2
 - Architecture: arm64
 
-## Using Blambda!
+### Dependencies
 
-I'm planning on adding examples tasks for deploying layers functions, but for now,
-you can do it the hard way with the AWS CLI.
+All but the most basic lambda functions will depend on Clojure libraries.
+Blambda has support for keeping these dependencies in a separate layer so that
+your function deployment contains only the source of your lambda itself.
+
+Your lambda should declare its dependencies in `bb.edn` or `deps.edn` as normal;
+for example, a lambda function that interacts with S3 using
+[awyeah-api](https://github.com/grzm/awyeah-api) might have a `src/bb.edn` that
+looks like this:
+
+``` clojure
+{:paths ["."]
+ :deps {com.cognitect.aws/endpoints {:mvn/version "1.1.12.206"}
+        com.cognitect.aws/s3 {:mvn/version "822.2.1109.0"}
+        com.grzm/awyeah-api {:git/url "https://github.com/grzm/awyeah-api"
+                             :git/sha "0fa7dd51f801dba615e317651efda8c597465af6"}
+        org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
+                                 :git/sha "433b0778e2c32f4bb5d0b48e5a33520bee28b906"}}}
+```
+
+You can add the following tasks to your project's top-level `bb.edn` to manage
+your dependencies layer:
+
+``` clojure
+:tasks
+{:requires ([blambda.api :as blambda])
+ ;; Other tasks here
+
+ build-deps-layer {:doc "Builds layer for dependencies"
+                   :task (blambda/build-deps-layer)}
+
+ deploy-deps-layer {:doc "Deploys custom runtime"
+                    :task (blambda/deploy-deps-layer)}}
+```
+
+To build your dependencies layer:
+
+``` sh
+bb build-deps-layer --deps-path src/bb.edn
+```
+
+And then to deploy it:
+
+``` sh
+bb deploy-deps-layer --deps-layer-name my-lambda-deps
+```
+
+## Basic example
+
+I'm planning on adding example tasks for deploying layers and functions, but for
+now, you can do it the hard way with the AWS CLI.
 
 ### AWS CLI
 
@@ -72,13 +137,7 @@ This section assumes you have the [AWS Command Line Interface version
 1](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-welcome.html)
 installed.
 
-To create or update a layer:
-
-``` sh
-bb deploy
-```
-
-Assuming you're standing in the root of the Blambda! repo, you will have an
+Assuming you're standing in the root of the Blambda repo, you will have an
 [example](example/) directory that contains a `hello.clj` that looks something
 like this:
 
@@ -91,7 +150,7 @@ like this:
   {:greeting (str "Hello " name "!")})
 ```
 
-You can create a function that uses Blambda! like this:
+You can create a function that uses Blambda like this:
 
 ``` sh
 # The ARN will be printed by the `bb deploy` command
