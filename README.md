@@ -27,15 +27,9 @@ This example assumes a basic `bb.edn` like this:
         #_"You use the newest SHA here:"
         {:git/sha "c253bf7d2b0bbbe3e53ad276b1c15c53b98d2088"}}
  :tasks
- {:requires ([blambda.api :as blambda]
-             [babashka.fs :as fs]
-             [task-helper :as th])
-
-  build-runtime-layer {:doc "Builds custom runtime"
-                       :task (blambda/build-runtime-layer)}
-
-  deploy-runtime-layer {:doc "Deploys custom runtime"
-                        :task (blambda/deploy-runtime-layer)}}}
+ {:requires ([blambda.cli :as blambda])
+  blambda {:doc "Controls Blambda runtime and layers"
+           :task (blambda/dispatch)}}}
 ```
 
 ### Building
@@ -43,19 +37,19 @@ This example assumes a basic `bb.edn` like this:
 To build Blambda with the default Babashka version and platform, run:
 
 ``` sh
-bb build-runtime-layer
+bb blambda build-runtime-layer
 ```
 
 To see what the default Babashka version and platform are, run:
 
 ``` sh
-bb build-runtime-layer --help
+bb blambda build-runtime-layer --help
 ```
 
 To build a custom runtime with Babashka 0.8.2 on amd64, run:
 
 ``` sh
-bb build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
+bb blambda build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
 ```
 
 ### Deploying
@@ -63,7 +57,7 @@ bb build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
 To deploy Blambda, run:
 
 ``` sh
-bb deploy-runtime-layer
+bb blambda deploy-runtime-layer
 ```
 
 To deploy an arm64 runtime so that you can use [AWS Graviton 2
@@ -71,7 +65,8 @@ lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-
 (which AWS say will give you up to "34%" better price performance), run:
 
 ``` sh
-bb build-runtime-layer --bb-arch arm64 && bb deploy-runtime-layer
+bb blambda build-runtime-layer --bb-arch arm64 && \
+bb blambda deploy-runtime-layer --bb-arch arm64
 ```
 
 Note that if you do this, you must configure your lambda as follows:
@@ -99,31 +94,16 @@ looks like this:
                                  :git/sha "433b0778e2c32f4bb5d0b48e5a33520bee28b906"}}}
 ```
 
-You can add the following tasks to your project's top-level `bb.edn` to manage
-your dependencies layer:
-
-``` clojure
-:tasks
-{:requires ([blambda.api :as blambda])
- ;; Other tasks here
-
- build-deps-layer {:doc "Builds layer for dependencies"
-                   :task (blambda/build-deps-layer)}
-
- deploy-deps-layer {:doc "Deploys custom runtime"
-                    :task (blambda/deploy-deps-layer)}}
-```
-
 To build your dependencies layer:
 
 ``` sh
-bb build-deps-layer --deps-path src/bb.edn
+bb blambda build-deps-layer --deps-path src/bb.edn
 ```
 
 And then to deploy it:
 
 ``` sh
-bb deploy-deps-layer --deps-layer-name my-lambda-deps
+bb blambda deploy-deps-layer --deps-layer-name my-lambda-deps
 ```
 
 ## Basic example
@@ -153,7 +133,7 @@ like this:
 You can create a function that uses Blambda like this:
 
 ``` sh
-# The ARN will be printed by the `bb deploy` command
+# The ARN will be printed by the `bb blambda deploy-runtime-layer` command
 layer_arn=arn:aws:lambda:eu-west-1:123456789100:layer:blambda:1
 
 cd example
