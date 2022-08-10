@@ -48,13 +48,14 @@ Subcommands:
   (print-command-help cmd spec)
   (System/exit 1))
 
-(defn mk-cmd [{:keys [cmd spec] :as cmd-opts}]
+(defn mk-cmd [default-opts {:keys [cmd spec] :as cmd-opts}]
   (let [spec (merge (:global specs) spec)]
     (merge
      cmd-opts
      {:cmds [cmd]
       :fn (fn [{:keys [opts]}]
-            (let [missing-args (->> (set (keys opts))
+            (let [opts (merge default-opts opts)
+                  missing-args (->> (set (keys opts))
                                     (set/difference (set (keys spec)))
                                     (map #(format "--%s" (name %)))
                                     (str/join ", "))]
@@ -73,45 +74,54 @@ Subcommands:
             ((:fn cmd-opts) (assoc opts :error (partial error spec)))))
       :spec spec})))
 
-(def table
-  (let [cmds
+(defn mk-table [opts]
+  (let [bb-arch {:desc "Architecture to target (use amd64 if you don't care)"
+                 :ref "<arch>"
+                 :values #{"amd64" "arm64"}}
+        cmds
         [{:cmd "build-runtime-layer"
           :desc "Builds Blambda custom runtime layer"
           :fn api/build-runtime-layer
           :spec {:bb-version {:desc "Babashka version"
                               :ref "<version>"
                               :default "0.9.161"}
-                 :bb-arch {:desc "Architecture to target"
-                           :default "amd64"
-                           :values #{"amd64" "arm64"}}}}
+                 :bb-arch bb-arch}}
          {:cmd "build-deps-layer"
           :desc "Builds dependencies layer from bb.edn or deps.edn"
           :fn api/build-deps-layer
           :spec {:deps-path
                  {:desc "Path to bb.edn or deps.edn containing lambda deps"
-                  :ref "<name>"}}}
+                  :ref "<path>"}}}
          {:cmd "deploy-runtime-layer"
           :desc "Deploys Blambda custom runtime layer"
           :fn api/deploy-runtime-layer
           :spec (merge
                  (:deploy specs)
                  {:runtime-layer-name {:desc "Name of custom runtime layer in AWS"
-                                       :default "blambda"}})}
+                                       :ref "<name>"
+                                       :default "blambda"}
+                 :bb-arch bb-arch})}
          {:cmd "deploy-deps-layer"
           :desc "Deploys dependencies layer"
           :fn api/deploy-deps-layer
           :spec (merge
                  (:deploy specs)
-                 {:deps-layer-name {:desc "Name of dependencies layer in AWS"}})}
+                 {:deps-layer-name {:desc "Name of dependencies layer in AWS"
+                                    :ref "<name>"}})}
          {:cmd "clean"
           :desc "Removes work and target folders"
           :fn api/clean}]]
     (cons {:cmds ["help"], :fn (fn [& _] (print-help cmds))}
-          (map mk-cmd cmds))))
+          (map (partial mk-cmd opts) cmds))))
 
-(defn dispatch [& args]
-  (cli/dispatch table (or args
-                          (seq *command-line-args*)
-                          ["help"])))
+(defn dispatch
+  ([]
+   (dispatch {}))
+  ([opts & args]
+   (cli/dispatch (mk-table opts)
+                 (or args
+                     (seq *command-line-args*)
+                     ["help"]))))
 
-(def -main dispatch)
+(defn -main [& args]
+  (apply dispatch {} args))
