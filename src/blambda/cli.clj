@@ -10,17 +10,26 @@
                  :ref "<dir>"
                  :default "target"}
     :work-dir {:desc "Working directory"
-                 :ref "<dir>"
+               :ref "<dir>"
                :default ".work"}}
    :deploy
    {:aws-region {:desc "AWS region"
                  :ref "<region>"
                  :default (or (System/getenv "AWS_DEFAULT_REGION") "eu-west-1")}}})
 
-(defn ->subcommand-help [{:keys [cmd desc spec]}]
-  (format "%s: %s\n%s" cmd desc (cli/format-opts {:spec spec})))
+(defn apply-defaults [default-opts spec]
+  (->> spec
+       (map (fn [[k v]]
+              (if-let [default-val (default-opts k)]
+                [k (assoc v :default default-val)]
+                [k v])))
+       (into {})))
 
-(defn print-help [cmds]
+(defn ->subcommand-help [default-opts {:keys [cmd desc spec]}]
+  (format "%s: %s\n%s" cmd desc
+          (cli/format-opts {:spec (apply-defaults default-opts spec)})))
+
+(defn print-help [default-opts cmds]
   (println
    (format
     "Usage: bb blambda <subcommand> <options>
@@ -34,7 +43,7 @@ Subcommands:
 %s"
     (cli/format-opts {:spec (:global specs)})
     (->> cmds
-         (map ->subcommand-help)
+         (map (partial ->subcommand-help default-opts))
          (str/join "\n\n"))))
   (System/exit 0))
 
@@ -49,13 +58,12 @@ Subcommands:
   (System/exit 1))
 
 (defn mk-cmd [default-opts {:keys [cmd spec] :as cmd-opts}]
-  (let [spec (merge (:global specs) spec)]
+  (let [spec (->> spec (merge (:global specs)) (apply-defaults default-opts))]
     (merge
      cmd-opts
      {:cmds [cmd]
       :fn (fn [{:keys [opts]}]
-            (let [opts (merge default-opts opts)
-                  missing-args (->> (set (keys opts))
+            (let [missing-args (->> (set (keys opts))
                                     (set/difference (set (keys spec)))
                                     (map #(format "--%s" (name %)))
                                     (str/join ", "))]
@@ -74,9 +82,10 @@ Subcommands:
             ((:fn cmd-opts) (assoc opts :error (partial error spec)))))
       :spec spec})))
 
-(defn mk-table [opts]
+(defn mk-table [default-opts]
   (let [bb-arch {:desc "Architecture to target (use amd64 if you don't care)"
                  :ref "<arch>"
+                 :default "amd64"
                  :values #{"amd64" "arm64"}}
         cmds
         [{:cmd "build-runtime-layer"
@@ -100,7 +109,7 @@ Subcommands:
                  {:runtime-layer-name {:desc "Name of custom runtime layer in AWS"
                                        :ref "<name>"
                                        :default "blambda"}
-                 :bb-arch bb-arch})}
+                  :bb-arch bb-arch})}
          {:cmd "deploy-deps-layer"
           :desc "Deploys dependencies layer"
           :fn api/deploy-deps-layer
@@ -111,17 +120,16 @@ Subcommands:
          {:cmd "clean"
           :desc "Removes work and target folders"
           :fn api/clean}]]
-    (cons {:cmds ["help"], :fn (fn [& _] (print-help cmds))}
-          (map (partial mk-cmd opts) cmds))))
+    (conj (mapv (partial mk-cmd default-opts) cmds)
+          {:cmds [], :fn (fn [m] (print-help default-opts cmds))})))
 
 (defn dispatch
   ([]
    (dispatch {}))
-  ([opts & args]
-   (cli/dispatch (mk-table opts)
+  ([default-opts & args]
+   (cli/dispatch (mk-table default-opts)
                  (or args
-                     (seq *command-line-args*)
-                     ["help"]))))
+                     (seq *command-line-args*)))))
 
 (defn -main [& args]
   (apply dispatch {} args))
