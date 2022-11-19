@@ -19,7 +19,7 @@
    :bb-version
    {:desc "Babashka version"
     :ref "<version>"
-    :default "0.9.161"}
+    :default "1.0.165"}
 
    :deps-layer-name
    {:desc "Name of dependencies layer in AWS"
