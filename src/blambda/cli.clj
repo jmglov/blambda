@@ -27,7 +27,8 @@
 
    :deps-path
    {:desc "Path to bb.edn or deps.edn containing lambda deps"
-    :ref "<path>"}
+    :ref "<path>"
+    :require true}
 
    :runtime-layer-name
    {:desc "Name of custom runtime layer in AWS"
@@ -38,6 +39,22 @@
    {:desc "Build output directory"
     :ref "<dir>"
     :default "target"}
+
+   :tf-module-dir
+   {:desc "Directory to write Terraform module into"
+    :ref "<dir>"}
+
+   :use-s3
+   {:desc "If true, use S3 for artifacts when creating layers"
+    :coerce :boolean}
+
+   :s3-bucket
+   {:desc "Bucket to use for S3 artifacts (if using S3)"
+    :ref "<bucket>"}
+
+   :s3-artifact-path
+   {:desc "Path in s3-bucket for artifacts (if using S3)"
+    :ref "<path>"}
 
    :work-dir
    {:desc "Working directory"
@@ -133,6 +150,10 @@ Subcommands:
           :desc "Deploys dependencies layer"
           :fn api/deploy-deps-layer
           :spec (mk-spec default-opts #{:aws-region :deps-layer-name})}
+         {:cmd "write-layer-module"
+          :desc "Generates a Terraform module for Lambda layers"
+          :fn api/write-lambda-layer-module
+          :spec (mk-spec default-opts #{:tf-module-dir :use-s3})}
          {:cmd "clean"
           :desc "Removes work and target folders"
           :fn api/clean}]]

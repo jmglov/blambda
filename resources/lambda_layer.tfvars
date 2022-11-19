@@ -1,0 +1,34 @@
+runtime_layer_name = "{{runtime-layer-name}}"
+runtime_layer_compatible_architectures = [
+  {% for a in runtime-layer-compatible-architectures %}
+  "{{a}}",
+  {% endfor %}
+]
+runtime_layer_compatible_runtimes = [
+  {% for r in runtime-layer-compatible-runtimes %}
+  "{{r}}",
+  {% endfor %}
+]
+runtime_layer_filename = "{{runtime-layer-filename}}"
+{% if use-s3 %}
+s3_bucket = "{{s3-bucket}}"
+runtime_layer_s3_object = "{{runtime-layer-s3-object}}"
+{% endif %}
+
+{% if deps-layer-name %}
+deps_layer_name = "{{deps-layer-name}}"
+deps_layer_compatible_architectures = [
+  {% for a in deps-layer-compatible-architectures %}
+  "{{a}}",
+  {% endfor %}
+]
+deps_layer_compatible_runtimes = [
+  {% for r in deps-layer-compatible-runtimes %}
+  "{{r}}",
+  {% endfor %}
+]
+deps_layer_filename = "{{deps-layer-filename}}"
+{% if use-s3 %}
+deps_layer_s3_object = "{{deps-layer-s3-object}}"
+{% endif %}
+{% endif %}

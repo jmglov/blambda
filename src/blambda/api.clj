@@ -6,32 +6,13 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
-            [clojure.string :as str]))
-
-(defn bb-filename [bb-version bb-arch]
-  (format "babashka-%s-%s.tar.gz"
-          bb-version
-          (if (= "arm64" bb-arch)
-            "linux-aarch64-static"
-            "linux-amd64-static")))
-
-(defn bb-url [bb-version filename]
-  (format "https://github.com/babashka/babashka/releases/download/v%s/%s"
-          bb-version filename))
-
-(defn deps-zipfile [target-dir]
-  (str (-> (fs/file target-dir) .getAbsolutePath)
-       "/deps.zip"))
-
-(defn layer-zipfile [target-dir]
-  (str (-> (fs/file target-dir) .getAbsolutePath)
-       "/bb.zip"))
+            [clojure.string :as str]
+            [selmer.parser :as selmer]))
 
 (defn build-deps-layer
   "Builds layer for dependencies"
-  [{:keys [error
-           deps-path target-dir work-dir]}]
-  (let [deps-zipfile (deps-zipfile target-dir)]
+  [{:keys [error deps-path target-dir work-dir] :as opts}]
+  (let [deps-zipfile (lib/deps-zipfile opts)]
     (when-not deps-path
       (error "Mising required argument: --deps-path"))
 
@@ -74,9 +55,9 @@
   "Builds custom runtime layer"
   [{:keys [bb-arch bb-version target-dir work-dir]
     :as opts}]
-  (let [layer-zipfile (layer-zipfile target-dir)
-        bb-filename (bb-filename bb-version bb-arch)
-        bb-url (bb-url bb-version bb-filename)
+  (let [runtime-zipfile (lib/runtime-zipfile opts)
+        bb-filename (lib/bb-filename bb-version bb-arch)
+        bb-url (lib/bb-url bb-version bb-filename)
         bb-tarball (format "%s/%s" work-dir bb-filename)]
     (doseq [dir [target-dir work-dir]]
       (fs/create-dirs dir))
@@ -95,9 +76,9 @@
       (fs/delete-if-exists (format "%s/%s" work-dir f))
       (fs/copy (io/resource f) work-dir))
 
-    (println "Compressing custom runtime layer:" layer-zipfile)
+    (println "Compressing custom runtime layer:" runtime-zipfile)
     (let [{:keys [exit err]}
-          (sh "zip" layer-zipfile
+          (sh "zip" runtime-zipfile
               "bb" "bootstrap" "bootstrap.clj"
               :dir work-dir)]
       (when (not= 0 exit)
@@ -117,18 +98,41 @@
   (when-not deps-layer-name
     (error "Mising required argument: --deps-layer-name"))
   (lib/deploy-layer (merge opts
-                           {:layer-filename (deps-zipfile target-dir)
+                           {:layer-filename (lib/deps-zipfile opts)
                             :layer-name deps-layer-name
-                            :architectures ["x86_64" "arm64"]
-                            :runtimes ["provided" "provided.al2"]})))
+                            :architectures (lib/deps-layer-architectures opts)
+                            :runtimes (lib/deps-layer-runtimes opts)})))
 
 (defn deploy-runtime-layer
   [{:keys [bb-arch runtime-layer-name target-dir] :as opts}]
-  (let [lambda-arch (if (= "amd64" bb-arch) "x86_64" "arm64")]
-    (lib/deploy-layer (merge opts
-                             {:layer-filename (layer-zipfile target-dir)
-                              :layer-name runtime-layer-name
-                              :architectures [lambda-arch]
-                              :runtimes (concat ["provided.al2"]
-                                                (when (= "amd64" bb-arch)
-                                                  ["provided"]))}))))
+  (lib/deploy-layer (merge opts
+                           {:layer-filename (lib/runtime-zipfile opts)
+                            :layer-name runtime-layer-name
+                            :architectures (lib/runtime-layer-architectures opts)
+                            :runtimes (lib/runtime-layer-runtimes opts)})))
+
+(defn generate-lambda-layer-module [opts]
+  (selmer/render (slurp (io/resource "lambda_layer.tf")) opts))
+
+(defn generate-lambda-layer-vars
+  [{:keys [s3-artifact-path target-dir use-s3
+           deps-layer-name] :as opts}]
+  (let [zipfile (lib/runtime-zipfile opts)
+        filename (fs/file-name zipfile)
+        deps-zipfile (when deps-layer-name (lib/deps-zipfile opts))
+        deps-filename (when deps-layer-name (fs/file-name deps-zipfile))]
+    (selmer/render
+     (slurp (io/resource "lambda_layer.tfvars"))
+     (merge opts
+            {:runtime-layer-compatible-architectures (lib/runtime-layer-architectures opts)
+             :runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
+             :runtime-layer-filename zipfile}
+            (when use-s3
+              {:runtime-layer-s3-object (lib/s3-artifact opts filename)})
+            (when deps-layer-name
+              {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)
+               :deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
+               :deps-layer-filename deps-zipfile})
+            (when (and deps-layer-name use-s3)
+              {:deps-layer-s3-object (lib/s3-artifact opts deps-filename)})))))
+
