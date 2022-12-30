@@ -164,9 +164,15 @@ Subcommands:
   ([]
    (dispatch {}))
   ([default-opts & args]
-   (cli/dispatch (mk-table default-opts)
-                 (or args
-                     (seq *command-line-args*)))))
+   (try
+     (cli/dispatch (mk-table default-opts)
+                   (or args
+                       (seq *command-line-args*)))
+     (catch Exception e
+       (let [data (ex-data e)]
+         (if (= :org.babashka/cli (:type data))
+           (do)
+           (throw e)))))))
 
 (defn -main [& args]
   (apply dispatch {} args))
