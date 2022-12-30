@@ -128,11 +128,31 @@
              :runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
              :runtime-layer-filename zipfile}
             (when use-s3
-              {:runtime-layer-s3-object (lib/s3-artifact opts filename)})
+              {:runtime-layer-s3-key (lib/s3-artifact opts filename)})
             (when deps-layer-name
               {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)
                :deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
                :deps-layer-filename deps-zipfile})
             (when (and deps-layer-name use-s3)
-              {:deps-layer-s3-object (lib/s3-artifact opts deps-filename)})))))
+              {:deps-layer-s3-key (lib/s3-artifact opts deps-filename)})))))
 
+(defn generate-lambda-layers-config [opts]
+  (selmer/render (slurp (io/resource "lambda_layers.tf")) opts))
+
+(defn write-tf-config [{:keys [target-dir tf-config-dir tf-module-dir] :as opts}]
+  (let [lambda-layer-config (generate-lambda-layers-config opts)
+        lambda-layer-vars (generate-lambda-layer-vars opts)
+        lambda-layer-module (generate-lambda-layer-module opts)
+        tf-dir (-> (fs/file target-dir tf-config-dir) fs/canonicalize)
+        tf-config-file (fs/file tf-dir "blambda.tf")
+        tf-vars-file (fs/file tf-dir "blambda.auto.tfvars")
+        tf-module-dir (-> (fs/file tf-dir tf-module-dir) fs/canonicalize)
+        tf-module-file (fs/file tf-module-dir "lambda_layer.tf")]
+    (fs/create-dirs tf-dir)
+    (fs/create-dirs tf-module-dir)
+    (println "Writing lambda layer config:" (str tf-config-file))
+    (spit tf-config-file lambda-layer-config)
+    (println "Writing lambda layer vars:" (str tf-vars-file))
+    (spit tf-vars-file lambda-layer-vars)
+    (println "Writing lambda layers module:" (str tf-module-file))
+    (spit tf-module-file lambda-layer-module)))

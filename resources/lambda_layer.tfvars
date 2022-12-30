@@ -12,7 +12,7 @@ runtime_layer_compatible_runtimes = [
 runtime_layer_filename = "{{runtime-layer-filename}}"
 {% if use-s3 %}
 s3_bucket = "{{s3-bucket}}"
-runtime_layer_s3_object = "{{runtime-layer-s3-object}}"
+runtime_layer_s3_key = "{{runtime-layer-s3-key}}"
 {% endif %}
 
 {% if deps-layer-name %}
@@ -29,6 +29,6 @@ deps_layer_compatible_runtimes = [
 ]
 deps_layer_filename = "{{deps-layer-filename}}"
 {% if use-s3 %}
-deps_layer_s3_object = "{{deps-layer-s3-object}}"
+deps_layer_s3_key = "{{deps-layer-s3-key}}"
 {% endif %}
 {% endif %}

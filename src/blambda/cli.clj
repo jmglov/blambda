@@ -40,9 +40,15 @@
     :ref "<dir>"
     :default "target"}
 
+   :tf-config-dir
+   {:desc "Directory to write Terraform config into, relative to target-dir"
+    :ref "<dir>"
+    :default "."}
+
    :tf-module-dir
-   {:desc "Directory to write Terraform module into"
-    :ref "<dir>"}
+   {:desc "Directory to write lambda layer Terraform module into, relative to tf-config-dir"
+    :ref "<dir>"
+    :default "lambda_layer"}
 
    :use-s3
    {:desc "If true, use S3 for artifacts when creating layers"
@@ -114,23 +120,16 @@ Subcommands:
    cmd-opts
    {:cmds [cmd]
     :fn (fn [{:keys [opts]}]
-          (let [missing-args (->> (set (keys opts))
-                                  (set/difference (set (keys spec)))
-                                  (map #(format "--%s" (name %)))
-                                  (str/join ", "))]
-            (when (:help opts)
-              (print-command-help cmd spec)
-              (System/exit 0))
-            (when-not (empty? missing-args)
+          (when (:help opts)
+            (print-command-help cmd spec)
+            (System/exit 0))
+          (doseq [[opt {:keys [values]}] spec]
+            (when (and values
+                       (not (contains? values (opts opt))))
               (error {:cmd cmd, :spec spec}
-                     (format "Missing required arguments: %s" missing-args)))
-            (doseq [[opt {:keys [values]}] spec]
-              (when (and values
-                         (not (contains? values (opts opt))))
-                (error {:cmd cmd, :spec spec}
-                       (format "Invalid value for --%s: %s\nValid values: %s"
-                               (name opt) (opts opt) (str/join ", " values)))))
-            ((:fn cmd-opts) (assoc opts :error (partial error spec)))))}))
+                     (format "Invalid value for --%s: %s\nValid values: %s"
+                             (name opt) (opts opt) (str/join ", " values)))))
+          ((:fn cmd-opts) (assoc opts :error (partial error spec))))}))
 
 (defn mk-table [default-opts]
   (let [cmds
@@ -141,7 +140,7 @@ Subcommands:
          {:cmd "build-deps-layer"
           :desc "Builds dependencies layer from bb.edn or deps.edn"
           :fn api/build-deps-layer
-          :spec (mk-spec default-opts #{:deps-path})}
+          :spec (mk-spec default-opts #{:deps-path :deps-layer-name})}
          {:cmd "deploy-runtime-layer"
           :desc "Deploys Blambda custom runtime layer"
           :fn api/deploy-runtime-layer
@@ -150,13 +149,16 @@ Subcommands:
           :desc "Deploys dependencies layer"
           :fn api/deploy-deps-layer
           :spec (mk-spec default-opts #{:aws-region :deps-layer-name})}
-         {:cmd "write-layer-module"
-          :desc "Generates a Terraform module for Lambda layers"
-          :fn api/write-lambda-layer-module
-          :spec (mk-spec default-opts #{:tf-module-dir :use-s3})}
+         {:cmd "write-tf-config"
+          :desc "Writes Terraform config for Lambda layers"
+          :fn api/write-tf-config
+          :spec (mk-spec default-opts #{:tf-config-dir :tf-module-dir
+                                        :runtime-layer-name :deps-layer-name
+                                        :use-s3 :s3-bucket :s3-artifact-path})}
          {:cmd "clean"
           :desc "Removes work and target folders"
-          :fn api/clean}]]
+          :fn api/clean
+          :spec (mk-spec default-opts #{})}]]
     (conj (mapv (partial mk-cmd default-opts) cmds)
           {:cmds [], :fn (fn [m] (print-help default-opts cmds))})))
 
@@ -171,7 +173,8 @@ Subcommands:
      (catch Exception e
        (let [data (ex-data e)]
          (if (= :org.babashka/cli (:type data))
-           (do)
+           (do
+             (println "Shit got fukt:" data))
            (throw e)))))))
 
 (defn -main [& args]

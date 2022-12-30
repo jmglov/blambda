@@ -4,7 +4,7 @@ variable "compatible_runtimes" {}
 variable "filename" {}
 {% if use-s3 %}
 variable "s3_bucket" {}
-variable "s3_object" {}
+variable "s3_key" {}
 {% endif %}
 
 resource "aws_lambda_layer_version" "layer" {
@@ -13,17 +13,17 @@ resource "aws_lambda_layer_version" "layer" {
   compatible_architectures = var.compatible_architectures
   compatible_runtimes = var.compatible_runtimes
 {% if use-s3 %}
-  s3_bucket = var.s3_bucket
-  s3_object = var.s3_object
+  s3_bucket = aws_s3_object.object.bucket
+  s3_key = aws_s3_object.object.key
 {% else %}
   filename = var.filename
 {% endif %}
 }
 
 {% if use-s3 %}
-resource "aws_s3_bucket_object" "object" {
+resource "aws_s3_object" "object" {
   bucket = var.s3_bucket
-  key = var.s3_object
+  key = var.s3_key
   source = var.filename
   etag = filemd5(var.filename)
 }
