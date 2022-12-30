@@ -1,3 +1,9 @@
-{:deps {org.babashka/cli {:mvn/version "0.3.34"}
-        net.jmglov/blambda {:local/root "."}}
- :paths ["."]}
+{:deps {net.jmglov/blambda {:local/root "."}}
+ :paths ["."]
+ :tasks
+ {:requires ([blambda.cli :as blambda])
+
+  blambda {:doc "Controls Blambda runtime and layers"
+           :task (blambda/dispatch {})}
+
+  }}
