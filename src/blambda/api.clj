@@ -41,7 +41,7 @@
         (spit classpath-file deps-classpath)
         (spit local-classpath-file classpath)
 
-        (println "Compressing custom runtime layer:" deps-zipfile)
+        (println "Compressing dependencies layer:" deps-zipfile)
         (let [{:keys [exit err]}
               (sh "zip" "-r" deps-zipfile
                   (fs/file-name gitlibs-dir)
