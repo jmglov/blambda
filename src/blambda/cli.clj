@@ -137,7 +137,7 @@ Subcommands:
         [{:cmd "build-runtime-layer"
           :desc "Builds Blambda custom runtime layer"
           :fn api/build-runtime-layer
-          :spec (mk-spec default-opts #{:bb-version :bb-arch})}
+          :spec (mk-spec default-opts #{:bb-version :bb-arch :runtime-layer-name})}
          {:cmd "build-deps-layer"
           :desc "Builds dependencies layer from bb.edn or deps.edn"
           :fn api/build-deps-layer
