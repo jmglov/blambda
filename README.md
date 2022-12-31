@@ -55,10 +55,33 @@ bb blambda build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
 
 ### Deploying
 
-To deploy Blambda, run:
+To deploy Blambda using Terraform (recommended), first write the config files:
 
 ``` sh
-bb blambda deploy-runtime-layer
+bb blambda terraform write-config
+```
+
+If you'd like to use S3 to store your lambda artifacts (layers and lambda
+zipfile), run:
+
+``` sh
+bb blambda terraform write-config \
+  --use-s3 --s3-bucket BUCKET --s3-artifact-path PATH
+```
+
+Replace `BUCKET` and `PATH` with the appropriate bucket and path. If the bucket
+you specify doesn't exist, it will be created by Terraform the first time you
+deploy. If you want to use an existing bucket, you'll need to import the bucket
+after you generate your Terraform config:
+
+``` text
+bb blambda terraform import-artifacts-bucket --s3-bucket BUCKET
+```
+
+To deploy, run:
+
+``` text
+bb blambda terraform apply
 ```
 
 To deploy an arm64 runtime so that you can use [AWS Graviton 2
@@ -67,12 +90,16 @@ lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-
 
 ``` sh
 bb blambda build-runtime-layer --bb-arch arm64 && \
-bb blambda deploy-runtime-layer --bb-arch arm64
+bb blambda terraform write-config --bb-arch arm64 && \
+bb blambda terraform apply
 ```
 
 Note that if you do this, you must configure your lambda as follows:
 - Runtime: Custom runtime on Amazon Linux 2
 - Architecture: arm64
+
+If you prefer not to use Terraform, you can use the AWS CLI as demonstrated in
+the Basic example section below.
 
 ### Dependencies
 
@@ -101,18 +128,7 @@ To build your dependencies layer:
 bb blambda build-deps-layer --deps-path src/bb.edn
 ```
 
-And then to deploy it:
-
-``` sh
-bb blambda deploy-deps-layer --deps-layer-name my-lambda-deps
-```
-
 ## Basic example
-
-I'm planning on adding example tasks for deploying layers and functions, but for
-now, you can do it the hard way with the AWS CLI.
-
-### AWS CLI
 
 This section assumes you have the [AWS Command Line Interface version
 1](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-welcome.html)
