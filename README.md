@@ -101,6 +101,11 @@ bb blambda build-deps-layer
 
 ### Lambda
 
+To build your lambda artifact:
+
+``` sh
+bb blambda build-lambda
+```
 
 ## Deploying
 
@@ -125,6 +130,87 @@ after you generate your Terraform config:
 
 ``` text
 bb blambda terraform import-artifacts-bucket --s3-bucket BUCKET
+```
+
+You can also include extra Terraform configuration. For example, if you want to
+create an IAM role for your lambda, you might have a file called `tf/iam.tf` in
+your repo which looks something like this:
+
+``` terraform
+resource "aws_iam_role" "hello" {
+  name = "site-analyser-lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "hello" {
+  name = "site-analyser-lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::logs.jmglov.net/logs/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.lambda.arn}:*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::logs.jmglov.net"
+        ]
+        Condition = {
+          "StringLike": {
+            "s3:prefix": "logs/*"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "hello" {
+  role = aws_iam_role.hello.name
+  policy_arn = aws_iam_policy.hello.arn
+}
+```
+
+Note how you can refer to resources defined by Blambda, for example
+`${aws_cloudwatch_log_group.lambda.arn}`. You can see what resources are defined
+by looking at `resources/blambda.tf` and `resources/lambda_layer.tf`.
+
+You can now use this IAM role with your lambda:
+
+``` sh
+bb blambda terraform write-config \
+  --extra-tf-config tf/iam.tf \
+  --lambda-iam-role '${aws_iam_role.hello.arn}'
 ```
 
 To deploy, run:

@@ -31,6 +31,12 @@
     :ref "<path>"
     :default "src/bb.edn"}
 
+   :extra-tf-config
+   {:desc "Filenames of additional Terraform files to include"
+    :ref "<files>"
+    :coerce []
+    :default []}
+
    :lambda-handler
    {:desc "Function used to handle requests (example: hello/handler)"
     :ref "<function>"
@@ -38,7 +44,7 @@
 
    :lambda-env-vars
    {:desc "Lambda environment variables, specified as key=val pairs"
-    :ref "<key>=<val>"
+    :ref "<keyvals>"
     :coerce []
     :default []}
 
@@ -198,7 +204,8 @@ Subcommands:
                                         :lambda-iam-role
                                         :lambda-env-vars
                                         :lambda-runtime :lambda-memory-size
-                                        :use-s3 :s3-bucket :s3-artifact-path})}
+                                        :use-s3 :s3-bucket :s3-artifact-path
+                                        :extra-tf-config})}
          {:cmd ["terraform" "apply"]
           :desc "Deploys runtime, deps layer, and lambda artifact"
           :fn api.terraform/apply!
