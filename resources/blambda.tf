@@ -23,6 +23,7 @@ variable "lambda_iam_role" {}
 variable "lambda_memory_size" {}
 variable "lambda_runtime" {}
 variable "lambda_architectures" {}
+variable "lambda_env_vars" {}
 {% if use-s3 %}
 variable "lambda_s3_key" {}
 {% endif %}
@@ -86,4 +87,7 @@ resource "aws_lambda_function" "lambda" {
     module.runtime.arn,
     module.deps.arn
   ]
+  environment {
+    variables = var.lambda_env_vars
+  }
 }

@@ -3,6 +3,7 @@
             [babashka.process :refer [shell]]
             [blambda.internal :as lib]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [selmer.parser :as selmer]))
 
 (defn tf-config-path [{:keys [target-dir tf-config-dir] :as opts} filename]
@@ -14,13 +15,17 @@
 
 (defn generate-vars
   [{:keys [s3-artifact-path target-dir use-s3
-           deps-layer-name] :as opts}]
+           deps-layer-name lambda-env-vars] :as opts}]
   (let [runtime-zipfile (lib/runtime-zipfile opts)
         runtime-filename (fs/file-name runtime-zipfile)
         lambda-zipfile (lib/lambda-zipfile opts)
         lambda-filename (fs/file-name lambda-zipfile)
         deps-zipfile (when deps-layer-name (lib/deps-zipfile opts))
-        deps-filename (when deps-layer-name (fs/file-name deps-zipfile))]
+        deps-filename (when deps-layer-name (fs/file-name deps-zipfile))
+        env-vars (->> lambda-env-vars
+                      (map #(let [[k v] (str/split % #"=")]
+                              {:key k
+                               :val v})))]
     (selmer/render
      (slurp (io/resource "blambda.tfvars"))
      (merge opts
@@ -28,7 +33,8 @@
              :runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
              :runtime-layer-filename runtime-zipfile
              :lambda-filename lambda-zipfile
-             :lambda-architecture (first (lib/runtime-layer-architectures opts))}
+             :lambda-architecture (first (lib/runtime-layer-architectures opts))
+             :lambda-env-vars env-vars}
             (when use-s3
               {:lambda-s3-key (lib/s3-artifact opts lambda-filename)
                :runtime-layer-s3-key (lib/s3-artifact opts runtime-filename)})

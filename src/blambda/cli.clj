@@ -36,6 +36,12 @@
     :ref "<function>"
     :require true}
 
+   :lambda-env-vars
+   {:desc "Lambda environment variables, specified as key=val pairs"
+    :ref "<key>=<val>"
+    :coerce []
+    :default []}
+
    :lambda-iam-role
    {:desc "ARN of IAM role (use ${aws_iam_role.name.arn} if defining in your own TF file)"
     :ref "<arn>"
@@ -69,6 +75,7 @@
    :source-files
    {:desc "List of files to include in lambda artifact; relative to source-dir"
     :ref "file1 file2 ..."
+    :require true
     :coerce []}
 
    :target-dir
@@ -187,7 +194,9 @@ Subcommands:
           :fn api.terraform/write-config
           :spec (mk-spec default-opts #{:tf-config-dir :tf-module-dir
                                         :runtime-layer-name :deps-layer-name
-                                        :lambda-name :lambda-handler :lambda-iam-role
+                                        :lambda-name :lambda-handler
+                                        :lambda-iam-role
+                                        :lambda-env-vars
                                         :lambda-runtime :lambda-memory-size
                                         :use-s3 :s3-bucket :s3-artifact-path})}
          {:cmd ["terraform" "apply"]
