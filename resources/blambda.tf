@@ -70,6 +70,8 @@ module "deps" {
 {% endif %}
 
 resource "aws_lambda_function" "lambda" {
+  depends_on = [aws_cloudwatch_log_group.lambda]
+
   function_name = var.lambda_name
   role = var.lambda_iam_role
   handler = var.lambda_handler
@@ -90,4 +92,8 @@ resource "aws_lambda_function" "lambda" {
   environment {
     variables = var.lambda_env_vars
   }
+}
+
+resource "aws_cloudwatch_log_group" "lambda" {
+  name = "/aws/lambda/${var.lambda_name}"
 }
