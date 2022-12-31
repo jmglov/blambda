@@ -25,7 +25,7 @@ resource "aws_s3_object" "object" {
   bucket = var.s3_bucket
   key = var.s3_key
   source = var.filename
-  etag = filemd5(var.filename)
+  source_hash = filebase64sha256(var.filename)
 }
 {% endif %}
 
