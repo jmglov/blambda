@@ -29,12 +29,47 @@
    :deps-path
    {:desc "Path to bb.edn or deps.edn containing lambda deps"
     :ref "<path>"
+    :default "src/bb.edn"}
+
+   :lambda-handler
+   {:desc "Function used to handle requests (example: hello/handler)"
+    :ref "<function>"
     :require true}
+
+   :lambda-iam-role
+   {:desc "ARN of IAM role (use ${aws_iam_role.name.arn} if defining in your own TF file)"
+    :ref "<arn>"
+    :require true}
+
+   :lambda-memory-size
+   {:desc "Amount of memory to use, in MB"
+    :ref "<mb>"
+    :default "512"}
+
+   :lambda-name
+   {:desc "Name of lambda function in AWS"
+    :ref "<name>"
+    :require true}
+
+   :lambda-runtime
+   {:desc "Identifier of the function's runtime (use provided or provided.al2)"
+    :ref "<runtime>"
+    :default "provided.al2"}
 
    :runtime-layer-name
    {:desc "Name of custom runtime layer in AWS"
     :ref "<name>"
     :default "blambda"}
+
+   :source-dir
+   {:desc "Lambda source directory"
+    :ref "<dir>"
+    :default "src"}
+
+   :source-files
+   {:desc "List of files to include in lambda artifact; relative to source-dir"
+    :ref "file1 file2 ..."
+    :coerce []}
 
    :target-dir
    {:desc "Build output directory"
@@ -49,7 +84,7 @@
    :tf-module-dir
    {:desc "Directory to write lambda layer Terraform module into, relative to tf-config-dir"
     :ref "<dir>"
-    :default "lambda_layer"}
+    :default "modules"}
 
    :use-s3
    {:desc "If true, use S3 for artifacts when creating layers"
@@ -143,11 +178,17 @@ Subcommands:
           :desc "Builds dependencies layer from bb.edn or deps.edn"
           :fn api/build-deps-layer
           :spec (mk-spec default-opts #{:deps-path :deps-layer-name})}
+         {:cmd "build-lambda"
+          :desc "Builds lambda artifact"
+          :fn api/build-lambda
+          :spec (mk-spec default-opts #{:lambda-name :source-dir :source-files})}
          {:cmd ["terraform" "write-config"]
           :desc "Writes Terraform config for Lambda layers"
           :fn api.terraform/write-config
           :spec (mk-spec default-opts #{:tf-config-dir :tf-module-dir
                                         :runtime-layer-name :deps-layer-name
+                                        :lambda-name :lambda-handler :lambda-iam-role
+                                        :lambda-runtime :lambda-memory-size
                                         :use-s3 :s3-bucket :s3-artifact-path})}
          {:cmd ["terraform" "apply"]
           :desc "Deploys runtime, deps layer, and lambda artifact"
@@ -173,19 +214,20 @@ Subcommands:
                    (or args
                        (seq *command-line-args*)))
      (catch Exception e
-       (let [data (ex-data e)]
-         (cond
-           (= :org.babashka/cli (:type data))
-           (do
-             (println "Something went wrong:" data))
+       (cond
+         (= :blambda/error (:type (ex-data e)))
+         (binding [*out* *err*]
+           (println (ex-message e))
+           ;; TODO: print subcommand help here somehow
+           )
 
-           data
-           (do
-             (println (ex-message e))
-             (System/exit 1))
+         (= :babashka.process/error (:type (ex-data e)))
+         (let [{:keys [exit]} (ex-data e)]
+           ;; Assume that the subprocess has already printed an error message
+           (System/exit exit))
 
-           :else
-           (throw e)))))))
+         :else
+         (throw e))))))
 
 (defn -main [& args]
   (apply dispatch {} args))

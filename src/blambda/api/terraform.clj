@@ -9,14 +9,16 @@
   (let [tf-dir (-> (fs/file target-dir tf-config-dir) fs/canonicalize)]
     (fs/file tf-dir filename)))
 
-(defn generate-lambda-layer-module [opts]
+(defn generate-module [opts]
   (selmer/render (slurp (io/resource "lambda_layer.tf")) opts))
 
-(defn generate-lambda-layer-vars
+(defn generate-vars
   [{:keys [s3-artifact-path target-dir use-s3
            deps-layer-name] :as opts}]
-  (let [zipfile (lib/runtime-zipfile opts)
-        filename (fs/file-name zipfile)
+  (let [runtime-zipfile (lib/runtime-zipfile opts)
+        runtime-filename (fs/file-name runtime-zipfile)
+        lambda-zipfile (lib/lambda-zipfile opts)
+        lambda-filename (fs/file-name lambda-zipfile)
         deps-zipfile (when deps-layer-name (lib/deps-zipfile opts))
         deps-filename (when deps-layer-name (fs/file-name deps-zipfile))]
     (selmer/render
@@ -24,9 +26,12 @@
      (merge opts
             {:runtime-layer-compatible-architectures (lib/runtime-layer-architectures opts)
              :runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
-             :runtime-layer-filename zipfile}
+             :runtime-layer-filename runtime-zipfile
+             :lambda-filename lambda-zipfile
+             :lambda-architecture (first (lib/runtime-layer-architectures opts))}
             (when use-s3
-              {:runtime-layer-s3-key (lib/s3-artifact opts filename)})
+              {:lambda-s3-key (lib/s3-artifact opts lambda-filename)
+               :runtime-layer-s3-key (lib/s3-artifact opts runtime-filename)})
             (when deps-layer-name
               {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)
                :deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
@@ -34,7 +39,7 @@
             (when (and deps-layer-name use-s3)
               {:deps-layer-s3-key (lib/s3-artifact opts deps-filename)})))))
 
-(defn generate-lambda-layers-config [opts]
+(defn generate-config [opts]
   (selmer/render (slurp (io/resource "blambda.tf")) opts))
 
 (defn run-tf-cmd! [{:keys [tf-config-dir] :as opts} cmd]
@@ -56,10 +61,12 @@
   (run-tf-cmd! opts "terraform init")
   (run-tf-cmd! opts (format "terraform import aws_s3_bucket.artifacts %s" s3-bucket)))
 
-(defn write-config [{:keys [target-dir tf-config-dir tf-module-dir] :as opts}]
-  (let [lambda-layer-config (generate-lambda-layers-config opts)
-        lambda-layer-vars (generate-lambda-layer-vars opts)
-        lambda-layer-module (generate-lambda-layer-module opts)
+(defn write-config [{:keys [lambda-name tf-module-dir] :as opts}]
+  (let [opts (assoc opts
+                    :lambda-filename (format "%s.zip" lambda-name))
+        lambda-layer-config (generate-config opts)
+        lambda-layer-vars (generate-vars opts)
+        lambda-layer-module (generate-module opts)
         config-file (tf-config-path opts "blambda.tf")
         vars-file (tf-config-path opts "blambda.auto.tfvars")
         module-dir (tf-config-path opts tf-module-dir)

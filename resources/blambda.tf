@@ -16,9 +16,27 @@ variable "deps_layer_s3_key" {}
 {% endif %}
 {% endif %}
 
+variable "lambda_name" {}
+variable "lambda_handler" {}
+variable "lambda_filename" {}
+variable "lambda_iam_role" {}
+variable "lambda_memory_size" {}
+variable "lambda_runtime" {}
+variable "lambda_architectures" {}
+{% if use-s3 %}
+variable "lambda_s3_key" {}
+{% endif %}
+
 {% if use-s3 %}
 resource "aws_s3_bucket" "artifacts" {
   bucket = var.s3_bucket
+}
+
+resource "aws_s3_object" "lambda" {
+  bucket = var.s3_bucket
+  key = var.lambda_s3_key
+  source = var.lambda_filename
+  etag = filemd5(var.lambda_filename)
 }
 {% endif %}
 
@@ -49,3 +67,23 @@ module "deps" {
 {% endif %}
 }
 {% endif %}
+
+resource "aws_lambda_function" "lambda" {
+  function_name = var.lambda_name
+  role = var.lambda_iam_role
+  handler = var.lambda_handler
+  memory_size = var.lambda_memory_size
+  source_code_hash = filebase64sha256(var.lambda_filename)
+{% if use-s3 %}
+  s3_bucket = aws_s3_object.lambda.bucket
+  s3_key = aws_s3_object.lambda.key
+{% else %}
+  filename = var.lambda_filename
+{% endif %}
+  runtime = var.lambda_runtime
+  architectures = var.lambda_architectures
+  layers = [
+    module.runtime.arn,
+    module.deps.arn
+  ]
+}

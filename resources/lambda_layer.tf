@@ -28,3 +28,7 @@ resource "aws_s3_object" "object" {
   etag = filemd5(var.filename)
 }
 {% endif %}
+
+output "arn" {
+  value = aws_lambda_layer_version.layer.arn
+}

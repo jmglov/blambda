@@ -30,10 +30,29 @@ This example assumes a basic `bb.edn` like this:
  :tasks
  {:requires ([blambda.cli :as blambda])
   blambda {:doc "Controls Blambda runtime and layers"
-           :task (blambda/dispatch)}}}
+           :task (blambda/dispatch
+                  {:deps-layer-name "hello-deps"
+                   :lambda-name "hello"
+                   :lambda-handler "hello/hello"
+                   :lambda-iam-role "arn:aws:iam::123456789100:role/hello-lambda"
+                   :source-files ["hello.clj"]})}}}
 ```
 
-### Building
+and a simple lambda function contained in a file `src/hello.clj` looking like
+this:
+
+``` clojure
+(ns hello)
+
+(defn hello [{:keys [name] :or {name "Blambda"} :as event} context]
+  (prn {:msg "Invoked with event",
+        :data {:event event}})
+  {:greeting (str "Hello " name "!")})
+```
+
+## Building
+
+### Custom runtime layer
 
 To build Blambda with the default Babashka version and platform, run:
 
@@ -53,7 +72,37 @@ To build a custom runtime with Babashka 0.8.2 on amd64, run:
 bb blambda build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
 ```
 
-### Deploying
+### Dependencies
+
+All but the most basic lambda functions will depend on Clojure libraries.
+Blambda has support for keeping these dependencies in a separate layer so that
+your function deployment contains only the source of your lambda itself.
+
+Your lambda should declare its dependencies in `bb.edn` or `deps.edn` as normal;
+for example, a lambda function that interacts with S3 using
+[awyeah-api](https://github.com/grzm/awyeah-api) might have a `src/bb.edn` that
+looks like this:
+
+``` clojure
+{:paths ["."]
+ :deps {com.cognitect.aws/endpoints {:mvn/version "1.1.12.206"}
+        com.cognitect.aws/s3 {:mvn/version "822.2.1109.0"}
+        com.grzm/awyeah-api {:git/url "https://github.com/grzm/awyeah-api"
+                             :git/sha "0fa7dd51f801dba615e317651efda8c597465af6"}
+        org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
+                                 :git/sha "433b0778e2c32f4bb5d0b48e5a33520bee28b906"}}}
+```
+
+To build your dependencies layer:
+
+``` sh
+bb blambda build-deps-layer
+```
+
+### Lambda
+
+
+## Deploying
 
 To deploy Blambda using Terraform (recommended), first write the config files:
 
@@ -100,33 +149,6 @@ Note that if you do this, you must configure your lambda as follows:
 
 If you prefer not to use Terraform, you can use the AWS CLI as demonstrated in
 the Basic example section below.
-
-### Dependencies
-
-All but the most basic lambda functions will depend on Clojure libraries.
-Blambda has support for keeping these dependencies in a separate layer so that
-your function deployment contains only the source of your lambda itself.
-
-Your lambda should declare its dependencies in `bb.edn` or `deps.edn` as normal;
-for example, a lambda function that interacts with S3 using
-[awyeah-api](https://github.com/grzm/awyeah-api) might have a `src/bb.edn` that
-looks like this:
-
-``` clojure
-{:paths ["."]
- :deps {com.cognitect.aws/endpoints {:mvn/version "1.1.12.206"}
-        com.cognitect.aws/s3 {:mvn/version "822.2.1109.0"}
-        com.grzm/awyeah-api {:git/url "https://github.com/grzm/awyeah-api"
-                             :git/sha "0fa7dd51f801dba615e317651efda8c597465af6"}
-        org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
-                                 :git/sha "433b0778e2c32f4bb5d0b48e5a33520bee28b906"}}}
-```
-
-To build your dependencies layer:
-
-``` sh
-bb blambda build-deps-layer --deps-path src/bb.edn
-```
 
 ## Basic example
 

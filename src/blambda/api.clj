@@ -2,10 +2,10 @@
   (:require [babashka.deps :refer [clojure]]
             [babashka.curl :as curl]
             [babashka.fs :as fs]
+            [babashka.process :refer [shell]]
             [blambda.internal :as lib]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.java.shell :refer [sh]]
             [clojure.string :as str]))
 
 (defn build-deps-layer
@@ -40,15 +40,12 @@
         (spit classpath-file deps-classpath)
         (spit local-classpath-file classpath)
 
-        (println "Compressing dependencies layer:" deps-zipfile)
-        (let [{:keys [exit err]}
-              (sh "zip" "-r" deps-zipfile
-                  (fs/file-name gitlibs-dir)
-                  (fs/file-name m2-dir)
-                  (fs/file-name classpath-file)
-                  :dir work-dir)]
-          (when (not= 0 exit)
-            (println "Error:" err)))))))
+        (println "Compressing dependencies layer:" (str deps-zipfile))
+        (shell {:dir work-dir}
+               "zip -r" deps-zipfile
+               (fs/file-name gitlibs-dir)
+               (fs/file-name m2-dir)
+               (fs/file-name classpath-file))))))
 
 (defn build-runtime-layer
   "Builds custom runtime layer"
@@ -68,20 +65,27 @@
        (io/file bb-tarball)))
 
     (println "Decompressing" bb-tarball "to" work-dir)
-    (sh "tar" "-C" work-dir "-xzf" bb-tarball)
+    (shell "tar -C" work-dir "-xzf" bb-tarball)
 
-    (doseq [f ["bootstrap" "bootstrap.clj"]]
-      (println "Adding file" f)
-      (fs/delete-if-exists (format "%s/%s" work-dir f))
-      (fs/copy (io/resource f) work-dir))
+    (lib/copy-files! (assoc opts :resource? true)
+                     ["bootstrap" "bootstrap.clj"])
 
-    (println "Compressing custom runtime layer:" runtime-zipfile)
-    (let [{:keys [exit err]}
-          (sh "zip" runtime-zipfile
-              "bb" "bootstrap" "bootstrap.clj"
-              :dir work-dir)]
-      (when (not= 0 exit)
-        (println "Error:" err)))))
+    (println "Compressing custom runtime layer:" (str runtime-zipfile))
+    (shell {:dir work-dir}
+           "zip" runtime-zipfile
+           "bb" "bootstrap" "bootstrap.clj")))
+
+(defn build-lambda [{:keys [lambda-name source-dir source-files
+                            target-dir work-dir] :as opts}]
+  (println "source-files:" source-files)
+  (when (empty? source-files)
+    (throw (ex-info "Missing source-files"
+                    {:type :blambda/error})))
+  (let [lambda-zipfile (lib/zipfile opts lambda-name)]
+    (lib/copy-files! opts source-files)
+    (println "Compressing lambda:" (str lambda-zipfile))
+    (apply shell {:dir work-dir}
+           "zip" lambda-zipfile source-files)))
 
 (defn clean
   "Deletes target and work directories"

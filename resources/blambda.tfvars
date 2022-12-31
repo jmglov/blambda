@@ -32,3 +32,13 @@ deps_layer_filename = "{{deps-layer-filename}}"
 deps_layer_s3_key = "{{deps-layer-s3-key}}"
 {% endif %}
 {% endif %}
+lambda_name = "{{lambda-name}}"
+lambda_handler = "{{lambda-handler}}"
+lambda_filename = "{{lambda-filename}}"
+lambda_iam_role = "{{lambda-iam-role}}"
+lambda_memory_size = "{{lambda-memory-size}}"
+lambda_runtime = "{{lambda-runtime}}"
+lambda_architectures = ["{{lambda-architecture}}"]
+{% if use-s3 %}
+lambda_s3_key = "{{lambda-s3-key}}"
+{% endif %}
