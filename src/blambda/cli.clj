@@ -1,6 +1,7 @@
 (ns blambda.cli
   (:require [babashka.cli :as cli]
             [blambda.api :as api]
+            [blambda.api.terraform :as api.terraform]
             [clojure.set :as set]
             [clojure.string :as str]))
 
@@ -81,6 +82,7 @@
   (->> (select-keys specs (set/union global-opts opts))
        (apply-defaults default-opts)))
 
+;; TODO: handle sub-subcommands
 (defn ->subcommand-help [default-opts {:keys [cmd desc spec]}]
   (let [spec (apply dissoc spec global-opts)]
     (format "%s: %s\n%s" cmd desc
@@ -118,7 +120,7 @@ Subcommands:
 (defn mk-cmd [default-opts {:keys [cmd spec] :as cmd-opts}]
   (merge
    cmd-opts
-   {:cmds [cmd]
+   {:cmds (if (vector? cmd) cmd [cmd])
     :fn (fn [{:keys [opts]}]
           (when (:help opts)
             (print-command-help cmd spec)
@@ -149,12 +151,20 @@ Subcommands:
           :desc "Deploys dependencies layer"
           :fn api/deploy-deps-layer
           :spec (mk-spec default-opts #{:aws-region :deps-layer-name})}
-         {:cmd "write-tf-config"
+         {:cmd ["terraform" "write-config"]
           :desc "Writes Terraform config for Lambda layers"
-          :fn api/write-tf-config
+          :fn api.terraform/write-config
           :spec (mk-spec default-opts #{:tf-config-dir :tf-module-dir
                                         :runtime-layer-name :deps-layer-name
                                         :use-s3 :s3-bucket :s3-artifact-path})}
+         {:cmd ["terraform" "apply"]
+          :desc "Deploys runtime, deps layer, and lambda artifact"
+          :fn api.terraform/apply!
+          :spec (mk-spec default-opts #{:tf-config-dir})}
+         {:cmd ["terraform" "import-artifacts-bucket"]
+          :desc "Imports existing S3 bucket for lambda artifacts"
+          :fn api.terraform/import-s3-bucket!
+          :spec (mk-spec default-opts #{:s3-bucket :tf-config-dir})}
          {:cmd "clean"
           :desc "Removes work and target folders"
           :fn api/clean
@@ -172,9 +182,17 @@ Subcommands:
                        (seq *command-line-args*)))
      (catch Exception e
        (let [data (ex-data e)]
-         (if (= :org.babashka/cli (:type data))
+         (cond
+           (= :org.babashka/cli (:type data))
            (do
-             (println "Shit got fukt:" data))
+             (println "Something went wrong:" data))
+
+           data
+           (do
+             (println (ex-message e))
+             (System/exit 1))
+
+           :else
            (throw e)))))))
 
 (defn -main [& args]

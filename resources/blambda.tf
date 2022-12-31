@@ -16,6 +16,12 @@ variable "deps_layer_s3_key" {}
 {% endif %}
 {% endif %}
 
+{% if use-s3 %}
+resource "aws_s3_bucket" "artifacts" {
+  bucket = var.s3_bucket
+}
+{% endif %}
+
 module "runtime" {
   source = "./{{tf-module-dir}}"
 
@@ -24,7 +30,7 @@ module "runtime" {
   compatible_runtimes = var.runtime_layer_compatible_runtimes
   filename = var.runtime_layer_filename
 {% if use-s3 %}
-  s3_bucket = var.s3_bucket
+  s3_bucket = aws_s3_bucket.artifacts.bucket
   s3_key = var.runtime_layer_s3_key
 {% endif %}
 }
@@ -38,7 +44,7 @@ module "deps" {
   compatible_runtimes = var.deps_layer_compatible_runtimes
   filename = var.deps_layer_filename
 {% if use-s3 %}
-  s3_bucket = var.s3_bucket
+  s3_bucket = aws_s3_bucket.artifacts.bucket
   s3_key = var.deps_layer_s3_key
 {% endif %}
 }
