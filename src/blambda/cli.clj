@@ -143,14 +143,6 @@ Subcommands:
           :desc "Builds dependencies layer from bb.edn or deps.edn"
           :fn api/build-deps-layer
           :spec (mk-spec default-opts #{:deps-path :deps-layer-name})}
-         {:cmd "deploy-runtime-layer"
-          :desc "Deploys Blambda custom runtime layer"
-          :fn api/deploy-runtime-layer
-          :spec (mk-spec default-opts #{:aws-region :bb-arch :runtime-layer-name})}
-         {:cmd "deploy-deps-layer"
-          :desc "Deploys dependencies layer"
-          :fn api/deploy-deps-layer
-          :spec (mk-spec default-opts #{:aws-region :deps-layer-name})}
          {:cmd ["terraform" "write-config"]
           :desc "Writes Terraform config for Lambda layers"
           :fn api.terraform/write-config

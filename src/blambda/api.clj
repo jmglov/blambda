@@ -6,8 +6,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
-            [clojure.string :as str]
-            [selmer.parser :as selmer]))
+            [clojure.string :as str]))
 
 (defn build-deps-layer
   "Builds layer for dependencies"
@@ -90,63 +89,3 @@
   (doseq [dir [target-dir work-dir]]
     (println "Removing directory:" dir)
     (fs/delete-tree dir)))
-
-(defn deploy-deps-layer
-  [{:keys [error
-           deps-layer-name target-dir]
-    :as opts}]
-  (when-not deps-layer-name
-    (error "Mising required argument: --deps-layer-name"))
-  (lib/deploy-layer (merge opts
-                           {:layer-filename (lib/deps-zipfile opts)
-                            :layer-name deps-layer-name
-                            :architectures (lib/deps-layer-architectures opts)
-                            :runtimes (lib/deps-layer-runtimes opts)})))
-
-(defn deploy-runtime-layer
-  [{:keys [bb-arch runtime-layer-name target-dir] :as opts}]
-  (lib/deploy-layer (merge opts
-                           {:layer-filename (lib/runtime-zipfile opts)
-                            :layer-name runtime-layer-name
-                            :architectures (lib/runtime-layer-architectures opts)
-                            :runtimes (lib/runtime-layer-runtimes opts)})))
-
-(comment
-
-  (def opts
-    {:bb-arch "arm64"
-     :bb-version "1.0.165"
-     :deps-layer-name "site-analyser-deps"
-     :deps-path "src/bb.edn"
-     :runtime-layer-name "blambda"
-     :target-dir "/home/jmglov/Documents/code/clojure/site-analyser/target"
-     :tf-config-dir "."
-     :tf-module-dir "lambda_layer"
-     :use-s3 true
-     :s3-bucket "misc.jmglov.net"
-     :s3-artifact-path "blambda"
-     :work-dir ".work"})
-  ;; => #<SciVar@41991bac:
-  ;;      {:use-s3 true,
-  ;;       :s3-artifact-path "blambda",
-  ;;       :bb-arch "arm64",
-  ;;       :runtime-layer-name "blambda",
-  ;;       :work-dir ".work",
-  ;;       :s3-bucket "misc.jmglov.net",
-  ;;       :deps-path "src/bb.edn",
-  ;;       :target-dir "target",
-  ;;       :tf-module-dir "tf/lambda_layer",
-  ;;       :bb-version "1.0.165",
-  ;;       :deps-layer-name "site-analyser-deps"}>
-
-  (println (generate-lambda-layer-module opts))
-
-  (println (generate-lambda-layer-module (assoc opts :use-s3 false)))
-
-  (println (generate-lambda-layer-vars opts))
-
-  (println (generate-lambda-layers-config opts))
-
-  (write-tf-config opts)
-
-  )

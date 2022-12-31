@@ -1,10 +1,1 @@
-{:paths ["src" "resources"]
- :deps {babashka/babashka.curl {:mvn/version "0.1.2"}
-        babashka/fs {:mvn/version "0.1.6"}
-        com.cognitect.aws/endpoints {:mvn/version "1.1.12.267"}
-        com.cognitect.aws/lambda {:mvn/version "822.2.1145.0"}
-        com.grzm/awyeah-api {:git/url "https://github.com/grzm/awyeah-api"
-                             :git/sha "0fa7dd51f801dba615e317651efda8c597465af6"}
-        org.babashka/cli {:mvn/version "0.3.34"}
-        org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
-                                 :git/sha "433b0778e2c32f4bb5d0b48e5a33520bee28b906"}}}
+{:paths ["src" "resources"]}

@@ -1,5 +1,4 @@
 {:deps {net.jmglov/blambda {:local/root "."}}
- :paths ["."]
  :tasks
  {:requires ([blambda.cli :as blambda])
 
