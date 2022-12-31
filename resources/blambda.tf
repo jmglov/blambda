@@ -19,7 +19,6 @@ variable "deps_layer_s3_key" {}
 variable "lambda_name" {}
 variable "lambda_handler" {}
 variable "lambda_filename" {}
-variable "lambda_iam_role" {}
 variable "lambda_memory_size" {}
 variable "lambda_runtime" {}
 variable "lambda_architectures" {}
@@ -73,7 +72,7 @@ resource "aws_lambda_function" "lambda" {
   depends_on = [aws_cloudwatch_log_group.lambda]
 
   function_name = var.lambda_name
-  role = var.lambda_iam_role
+  role = "{{lambda-iam-role}}"
   handler = var.lambda_handler
   memory_size = var.lambda_memory_size
   source_code_hash = filebase64sha256(var.lambda_filename)
