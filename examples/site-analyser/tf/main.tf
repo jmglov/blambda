@@ -10,16 +10,16 @@ output "function_url" {
 resource "aws_dynamodb_table" "site_analyser" {
   name = "site-analyser"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key = "url"
-  range_key = "date"
+  hash_key = "date"
+  range_key = "url"
 
   attribute {
-    name = "url"
+    name = "date"
     type = "S"
   }
 
   attribute {
-    name = "date"
+    name = "url"
     type = "S"
   }
 }
