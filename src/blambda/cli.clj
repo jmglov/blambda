@@ -7,20 +7,20 @@
 
 (def specs
   {:bb-arch
-   {:cmds #{:build-runtime-layer :build-all}
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Architecture to target (use amd64 if you don't care)"
     :ref "<arch>"
     :default "amd64"
     :values #{"amd64" "arm64"}}
 
    :bb-version
-   {:cmds #{:build-runtime-layer :build-all}
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Babashka version"
     :ref "<version>"
     :default "1.0.168"}
 
    :deps-layer-name
-   {:cmds #{:build-deps-layer :build-all}
+   {:cmds #{:build-deps-layer :build-all :terraform-write-config}
     :desc "Name of dependencies layer in AWS"
     :ref "<name>"}
 
@@ -52,9 +52,8 @@
 
    :lambda-iam-role
    {:cmds #{:terraform-write-config}
-    :desc "ARN of IAM role (use ${aws_iam_role.name.arn} if defining in your own TF file)"
-    :ref "<arn>"
-    :require true}
+    :desc "ARN of custom lambda role (use ${aws_iam_role.name.arn} if defining in your own TF file)"
+    :ref "<arn>"}
 
    :lambda-memory-size
    {:cmds #{:terraform-write-config}
@@ -75,7 +74,7 @@
     :default "provided.al2"}
 
    :runtime-layer-name
-   {:cmds #{:build-runtime-layer :build-all}
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Name of custom runtime layer in AWS"
     :ref "<name>"
     :default "blambda"}
@@ -155,6 +154,10 @@
     (format "%s: %s\n%s" cmd desc
             (cli/format-opts {:spec
                               (apply-defaults default-opts spec)}))))
+
+(defn print-stderr [msg]
+  (binding [*out* *err*]
+    (println msg)))
 
 (defn print-help [default-opts cmds]
   (println
@@ -246,20 +249,21 @@ Subcommands:
                    (or args
                        (seq *command-line-args*)))
      (catch Exception e
-       (cond
-         (= :blambda/error (:type (ex-data e)))
-         (binding [*out* *err*]
-           (println (ex-message e))
-           ;; TODO: print subcommand help here somehow
-           )
+       (let [err-type (:type (ex-data e))]
+         (cond
+           (contains? #{:blambda/error :org.babashka/cli} err-type)
+           (do
+             ;; TODO: print subcommand help here somehow
+             (print-stderr (ex-message e))
+             (System/exit 1))
 
-         (= :babashka.process/error (:type (ex-data e)))
-         (let [{:keys [exit]} (ex-data e)]
-           ;; Assume that the subprocess has already printed an error message
-           (System/exit exit))
+           (= :babashka.process/error err-type)
+           (let [{:keys [exit]} (ex-data e)]
+             ;; Assume that the subprocess has already printed an error message
+             (System/exit exit))
 
-         :else
-         (throw e))))))
+           :else
+           (throw e)))))))
 
 (defn -main [& args]
   (apply dispatch {} args))

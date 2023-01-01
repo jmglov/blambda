@@ -38,11 +38,6 @@ lambda_filename = "{{lambda-filename}}"
 lambda_memory_size = "{{lambda-memory-size}}"
 lambda_runtime = "{{lambda-runtime}}"
 lambda_architectures = ["{{lambda-architecture}}"]
-lambda_env_vars = {
-{% for i in lambda-env-vars %}
-  {{i.key}} = "{{i.val}}"
-{% endfor %}
-}
 {% if use-s3 %}
 lambda_s3_key = "{{lambda-s3-key}}"
 {% endif %}

@@ -22,7 +22,6 @@ variable "lambda_filename" {}
 variable "lambda_memory_size" {}
 variable "lambda_runtime" {}
 variable "lambda_architectures" {}
-variable "lambda_env_vars" {}
 {% if use-s3 %}
 variable "lambda_s3_key" {}
 {% endif %}
@@ -72,7 +71,11 @@ resource "aws_lambda_function" "lambda" {
   depends_on = [aws_cloudwatch_log_group.lambda]
 
   function_name = var.lambda_name
+{% if lambda-iam-role %}
   role = "{{lambda-iam-role}}"
+{% else %}
+  role = aws_iam_role.lambda.arn
+{% endif %}
   handler = var.lambda_handler
   memory_size = var.lambda_memory_size
   source_code_hash = filebase64sha256(var.lambda_filename)
@@ -86,13 +89,61 @@ resource "aws_lambda_function" "lambda" {
   architectures = var.lambda_architectures
   layers = [
     module.runtime.arn,
-    module.deps.arn
+{% if deps-layer-name %}
+    module.deps.arn,
+{% endif %}
   ]
+{% if lambda-env-vars|length > 0 %}
   environment {
-    variables = var.lambda_env_vars
+    variables = {
+{% for i in lambda-env-vars %}
+      {{i.key}} = "{{i.val}}"
+{% endfor %}
+    }
   }
+{% endif %}
 }
 
 resource "aws_cloudwatch_log_group" "lambda" {
   name = "/aws/lambda/${var.lambda_name}"
 }
+
+{% if not lambda-iam-role %}
+resource "aws_iam_role" "lambda" {
+  name = var.lambda_name
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "lambda" {
+  name = var.lambda_name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.lambda.arn}:*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda" {
+  role = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.lambda.arn
+}
+{% endif %}
