@@ -30,10 +30,29 @@ This example assumes a basic `bb.edn` like this:
  :tasks
  {:requires ([blambda.cli :as blambda])
   blambda {:doc "Controls Blambda runtime and layers"
-           :task (blambda/dispatch)}}}
+           :task (blambda/dispatch
+                  {:deps-layer-name "hello-deps"
+                   :lambda-name "hello"
+                   :lambda-handler "hello/hello"
+                   :lambda-iam-role "arn:aws:iam::123456789100:role/hello-lambda"
+                   :source-files ["hello.clj"]})}}}
 ```
 
-### Building
+and a simple lambda function contained in a file `src/hello.clj` looking like
+this:
+
+``` clojure
+(ns hello)
+
+(defn hello [{:keys [name] :or {name "Blambda"} :as event} context]
+  (prn {:msg "Invoked with event",
+        :data {:event event}})
+  {:greeting (str "Hello " name "!")})
+```
+
+## Building
+
+### Custom runtime layer
 
 To build Blambda with the default Babashka version and platform, run:
 
@@ -52,27 +71,6 @@ To build a custom runtime with Babashka 0.8.2 on amd64, run:
 ``` sh
 bb blambda build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
 ```
-
-### Deploying
-
-To deploy Blambda, run:
-
-``` sh
-bb blambda deploy-runtime-layer
-```
-
-To deploy an arm64 runtime so that you can use [AWS Graviton 2
-lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-arm-based-aws-graviton2-processors/)
-(which AWS say will give you up to "34%" better price performance), run:
-
-``` sh
-bb blambda build-runtime-layer --bb-arch arm64 && \
-bb blambda deploy-runtime-layer --bb-arch arm64
-```
-
-Note that if you do this, you must configure your lambda as follows:
-- Runtime: Custom runtime on Amazon Linux 2
-- Architecture: arm64
 
 ### Dependencies
 
@@ -98,21 +96,147 @@ looks like this:
 To build your dependencies layer:
 
 ``` sh
-bb blambda build-deps-layer --deps-path src/bb.edn
+bb blambda build-deps-layer
 ```
 
-And then to deploy it:
+### Lambda
+
+To build your lambda artifact:
 
 ``` sh
-bb blambda deploy-deps-layer --deps-layer-name my-lambda-deps
+bb blambda build-lambda
 ```
 
+## Deploying
+
+To deploy Blambda using Terraform (recommended), first write the config files:
+
+``` sh
+bb blambda terraform write-config
+```
+
+If you'd like to use S3 to store your lambda artifacts (layers and lambda
+zipfile), run:
+
+``` sh
+bb blambda terraform write-config \
+  --use-s3 --s3-bucket BUCKET --s3-artifact-path PATH
+```
+
+Replace `BUCKET` and `PATH` with the appropriate bucket and path. If the bucket
+you specify doesn't exist, it will be created by Terraform the first time you
+deploy. If you want to use an existing bucket, you'll need to import the bucket
+after you generate your Terraform config:
+
+``` text
+bb blambda terraform import-artifacts-bucket --s3-bucket BUCKET
+```
+
+You can also include extra Terraform configuration. For example, if you want to
+create an IAM role for your lambda, you might have a file called `tf/iam.tf` in
+your repo which looks something like this:
+
+``` terraform
+resource "aws_iam_role" "hello" {
+  name = "site-analyser-lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "hello" {
+  name = "site-analyser-lambda"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::logs.jmglov.net/logs/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.lambda.arn}:*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::logs.jmglov.net"
+        ]
+        Condition = {
+          "StringLike": {
+            "s3:prefix": "logs/*"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "hello" {
+  role = aws_iam_role.hello.name
+  policy_arn = aws_iam_policy.hello.arn
+}
+```
+
+Note how you can refer to resources defined by Blambda, for example
+`${aws_cloudwatch_log_group.lambda.arn}`. You can see what resources are defined
+by looking at `resources/blambda.tf` and `resources/lambda_layer.tf`.
+
+You can now use this IAM role with your lambda:
+
+``` sh
+bb blambda terraform write-config \
+  --extra-tf-config tf/iam.tf \
+  --lambda-iam-role '${aws_iam_role.hello.arn}'
+```
+
+To deploy, run:
+
+``` text
+bb blambda terraform apply
+```
+
+To deploy an arm64 runtime so that you can use [AWS Graviton 2
+lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-arm-based-aws-graviton2-processors/)
+(which AWS say will give you up to "34%" better price performance), run:
+
+``` sh
+bb blambda build-runtime-layer --bb-arch arm64 && \
+bb blambda terraform write-config --bb-arch arm64 && \
+bb blambda terraform apply
+```
+
+Note that if you do this, you must configure your lambda as follows:
+- Runtime: Custom runtime on Amazon Linux 2
+- Architecture: arm64
+
+If you prefer not to use Terraform, you can use the AWS CLI as demonstrated in
+the Basic example section below.
+
 ## Basic example
-
-I'm planning on adding example tasks for deploying layers and functions, but for
-now, you can do it the hard way with the AWS CLI.
-
-### AWS CLI
 
 This section assumes you have the [AWS Command Line Interface version
 1](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-welcome.html)

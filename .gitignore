@@ -1,7 +1,6 @@
 /classes/
-/target/
-/.work/
-/bb
+target/
+.work/
 .lein-deps-sum
 .lein-repl-history
 .lein-plugins/

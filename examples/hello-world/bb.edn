@@ -1,0 +1,13 @@
+{:paths ["."]
+ :deps {net.jmglov/blambda {:local/root "../.."}
+        #_"You use the newest SHA here:"
+        #_{:git/url "https://github.com/jmglov/blambda.git"
+           :git/sha "2453e15cf75c03b2b02de5ca89c76081bba40251"}}
+ :tasks
+ {:requires ([blambda.cli :as blambda])
+
+  blambda {:doc "Controls Blambda runtime and layers"
+           :task (blambda/dispatch
+                  {:lambda-name "hello-blambda"
+                   :lambda-handler "hello/handler"
+                   :source-files ["hello.clj"]})}}}
