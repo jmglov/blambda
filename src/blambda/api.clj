@@ -89,7 +89,9 @@
                     {:type :blambda/error})))
   (let [lambda-zipfile (lib/zipfile opts lambda-name)]
     (if (empty? (fs/modified-since lambda-zipfile
-                                   (map (partial fs/file source-dir) source-files)))
+                                   (->> source-files
+                                        (map (partial fs/file source-dir))
+                                        (cons "bb.edn"))))
       (println "\nNot rebuilding lambda artifact; no changes to source files since last built:"
                source-files)
       (do
