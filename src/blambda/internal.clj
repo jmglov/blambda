@@ -56,7 +56,7 @@
                               source-dir (fs/file source-dir f)
                               :else f)
                 parent (fs/parent f)]]
-    (println "Adding file" (str f))
+    (println "Adding file:" (str f))
     (when parent
       (fs/create-dirs parent))
     (fs/delete-if-exists (fs/file work-dir f))

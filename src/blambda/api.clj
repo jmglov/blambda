@@ -11,10 +11,8 @@
 (defn build-deps-layer
   "Builds layer for dependencies"
   [{:keys [error deps-path target-dir work-dir] :as opts}]
+  (println "\nBuilding dependencies layer")
   (let [deps-zipfile (lib/deps-zipfile opts)]
-    (when-not deps-path
-      (error "Mising required argument: --deps-path"))
-
     (fs/create-dirs target-dir work-dir)
 
     (let [gitlibs-dir "gitlibs"
@@ -51,6 +49,7 @@
   "Builds custom runtime layer"
   [{:keys [bb-arch bb-version target-dir work-dir]
     :as opts}]
+  (println "\nBuilding custom runtime layer")
   (let [runtime-zipfile (lib/runtime-zipfile opts)
         bb-filename (lib/bb-filename bb-version bb-arch)
         bb-url (lib/bb-url bb-version bb-filename)
@@ -77,15 +76,21 @@
 
 (defn build-lambda [{:keys [lambda-name source-dir source-files
                             target-dir work-dir] :as opts}]
-  (println "source-files:" source-files)
   (when (empty? source-files)
     (throw (ex-info "Missing source-files"
                     {:type :blambda/error})))
+  (println "\nBuilding lambda artifact")
   (let [lambda-zipfile (lib/zipfile opts lambda-name)]
     (lib/copy-files! opts source-files)
     (println "Compressing lambda:" (str lambda-zipfile))
     (apply shell {:dir work-dir}
            "zip" lambda-zipfile source-files)))
+
+(defn build-all [{:keys [deps-layer-name] :as opts}]
+  (build-runtime-layer opts)
+  (when deps-layer-name
+    (build-deps-layer opts))
+  (build-lambda opts))
 
 (defn clean
   "Deletes target and work directories"
