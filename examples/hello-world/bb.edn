@@ -8,6 +8,6 @@
 
   blambda {:doc "Controls Blambda runtime and layers"
            :task (blambda/dispatch
-                  {:lambda-name "hello-world"
+                  {:lambda-name "hello-blambda"
                    :lambda-handler "hello/handler"
                    :source-files ["hello.clj"]})}}}
