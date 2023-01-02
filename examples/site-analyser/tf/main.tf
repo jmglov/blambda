@@ -58,9 +58,7 @@ resource "aws_iam_policy" "lambda" {
       {
         Effect = "Allow"
         Action = [
-          "dynamodb:GetItem",
-          "dynamodb:QueryItem",
-          "dynamodb:Scan",
+          "dynamodb:Query",
           "dynamodb:UpdateItem",
         ]
         Resource = aws_dynamodb_table.site_analyser.arn

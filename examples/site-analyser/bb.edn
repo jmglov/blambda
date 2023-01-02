@@ -5,16 +5,39 @@
            :git/sha "2453e15cf75c03b2b02de5ca89c76081bba40251"}}
  :tasks
  {:requires ([blambda.cli :as blambda])
+  :init (do
+          (def config {:bb-arch "arm64"
+                       :deps-layer-name "site-analyser-example-deps"
+                       :lambda-name "site-analyser-example"
+                       :lambda-handler "handler/handler"
+                       :lambda-iam-role "${aws_iam_role.lambda.arn}"
+                       :lambda-env-vars ["VIEWS_TABLE=${aws_dynamodb_table.site_analyser.name}"]
+                       :source-files [
+                                      ;; Clojure sources
+                                      "handler.clj"
+                                      "favicon.clj"
+                                      "page_views.clj"
+                                      "util.clj"
+
+                                      ;; HTML templates
+                                      "index.html"
+
+                                      ;; favicon
+                                      "android-chrome-192x192.png"
+                                      "mstile-150x150.png"
+                                      "favicon-16x16.png"
+                                      "safari-pinned-tab.svg"
+                                      "favicon.ico"
+                                      "site.webmanifest"
+                                      "android-chrome-512x512.png"
+                                      "apple-touch-icon.png"
+                                      "browserconfig.xml"
+                                      "favicon-32x32.png"
+                                      ]
+                       :use-s3 true
+                       :s3-bucket "YOUR_BUCKET"
+                       :s3-artifact-path "lambda-artifacts"
+                       :extra-tf-config ["tf/main.tf"]}))
 
   blambda {:doc "Controls Blambda runtime and layers"
-           :task (blambda/dispatch
-                  {:bb-arch "arm64"
-                   :deps-layer-name "site-analyser-example-deps"
-                   :lambda-name "site-analyser-example"
-                   :lambda-handler "handler/handler"
-                   :lambda-iam-role "${aws_iam_role.lambda.arn}"
-                   :source-files ["handler.clj" "index.html"]
-                   :use-s3 true
-                   :s3-bucket "YOUR-BUCKET-HERE"
-                   :s3-artifact-path "lambda-artifacts"})}}}
-                   :extra-tf-config ["tf/main.tf"]})}}}
+           :task (blambda/dispatch config)}}}
