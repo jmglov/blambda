@@ -14,18 +14,13 @@
   (selmer/render (slurp (io/resource "lambda_layer.tf")) opts))
 
 (defn generate-vars
-  [{:keys [s3-artifact-path target-dir use-s3
-           deps-layer-name lambda-env-vars] :as opts}]
+  [{:keys [s3-artifact-path target-dir use-s3 deps-layer-name] :as opts}]
   (let [runtime-zipfile (lib/runtime-zipfile opts)
         runtime-filename (fs/file-name runtime-zipfile)
         lambda-zipfile (lib/lambda-zipfile opts)
         lambda-filename (fs/file-name lambda-zipfile)
         deps-zipfile (when deps-layer-name (lib/deps-zipfile opts))
-        deps-filename (when deps-layer-name (fs/file-name deps-zipfile))
-        env-vars (->> lambda-env-vars
-                      (map #(let [[k v] (str/split % #"=")]
-                              {:key k
-                               :val v})))]
+        deps-filename (when deps-layer-name (fs/file-name deps-zipfile))]
     (selmer/render
      (slurp (io/resource "blambda.tfvars"))
      (merge opts
@@ -33,8 +28,7 @@
              :runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
              :runtime-layer-filename runtime-zipfile
              :lambda-filename lambda-zipfile
-             :lambda-architecture (first (lib/runtime-layer-architectures opts))
-             :lambda-env-vars env-vars}
+             :lambda-architecture (first (lib/runtime-layer-architectures opts))}
             (when use-s3
               {:lambda-s3-key (lib/s3-artifact opts lambda-filename)
                :runtime-layer-s3-key (lib/s3-artifact opts runtime-filename)})
@@ -45,8 +39,13 @@
             (when (and deps-layer-name use-s3)
               {:deps-layer-s3-key (lib/s3-artifact opts deps-filename)})))))
 
-(defn generate-config [opts]
-  (selmer/render (slurp (io/resource "blambda.tf")) opts))
+(defn generate-config [{:keys [lambda-env-vars] :as opts}]
+  (let [env-vars (->> lambda-env-vars
+                      (map #(let [[k v] (str/split % #"=")]
+                              {:key k
+                               :val v})))]
+    (selmer/render (slurp (io/resource "blambda.tf"))
+                   (assoc opts :lambda-env-vars env-vars))))
 
 (defn run-tf-cmd! [{:keys [tf-config-dir] :as opts} cmd]
   (let [config-file (tf-config-path opts "blambda.tf")]
