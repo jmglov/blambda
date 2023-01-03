@@ -50,6 +50,8 @@ this:
   {:greeting (str "Hello " name "!")})
 ```
 
+You can find more examples in the [examples](examples/) directory in this repo.
+
 ## Building
 
 ### Custom runtime layer
@@ -233,95 +235,6 @@ Note that if you do this, you must configure your lambda as follows:
 - Runtime: Custom runtime on Amazon Linux 2
 - Architecture: arm64
 
-If you prefer not to use Terraform, you can use the AWS CLI as demonstrated in
-the Basic example section below.
-
-## Basic example
-
-This section assumes you have the [AWS Command Line Interface version
-1](https://docs.aws.amazon.com/cli/v1/userguide/cli-chap-welcome.html)
-installed.
-
-Assuming you're standing in the root of the Blambda repo, you will have an
-[example](example/) directory that contains a `hello.clj` that looks something
-like this:
-
-``` clojure
-(ns hello)
-
-(defn hello [{:keys [name] :or {name "Blambda"} :as event} context]
-  (prn {:msg "Invoked with event",
-        :data {:event event}})
-  {:greeting (str "Hello " name "!")})
-```
-
-You can create a function that uses Blambda like this:
-
-``` sh
-# The ARN will be printed by the `bb blambda deploy-runtime-layer` command
-layer_arn=arn:aws:lambda:eu-west-1:123456789100:layer:blambda:1
-
-cd example
-
-zip hello-blambda.zip hello.clj
-
-aws iam create-role \
-  --role-name hello-blambda \
-  --assume-role-policy-document file://trust.json
-
-# Set this to the value of `Role.Arn` from the output of the previous command
-role_arn=arn:aws:iam::123456789100:role/hello-blambda
-
-aws iam create-policy \
-  --policy-name hello-blambda \
-  --policy-document file://policy.json
-
-# Set this to the value of `Policy.Arn` from the output of the previous command
-policy_arn=arn:aws:iam::123456789100:policy/hello-blambda
-
-aws iam attach-role-policy \
-  --role-name hello-blambda \
-  --policy-arn=$policy_arn 
-
-aws lambda create-function \
-  --function-name hello-blambda \
-  --runtime provided \
-  --role $role_arn \
-  --handler hello/hello \
-  --layers $layer_arn \
-  --zip-file fileb://hello-blambda.zip
-```
-
-You can invoke the function like this:
-
-``` sh
-aws lambda invoke \
-  --function-name hello-blambda \
-  --payload '{}' \
-  /dev/stdout
-```
-
-You should see something like this:
-
-```
-{"greeting":"Hello Blambda!"}{
-    "StatusCode": 200,
-    "ExecutedVersion": "$LATEST"
-}
-```
-
-Of course, you can also get more personal:
-
-``` sh
-aws lambda invoke \
-  --function-name hello-blambda \
-  --payload '{"name": "Josh"}' \
-  /dev/stdout
-```
-
-```
-{"greeting":"Hello Josh!"}{
-    "StatusCode": 200,
-    "ExecutedVersion": "$LATEST"
-}
-```
+If you prefer not to use Terraform, you can use the AWS CLI, CloudFormation, or
+the AWS console, but Blambda doesn't currently offer any tooling for those
+options.
