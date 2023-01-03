@@ -24,9 +24,9 @@ This example assumes a basic `bb.edn` like this:
 
 ``` clojure
 {:deps {net.jmglov/blambda
-        #_"You use the newest SHA here:"
         {:git/url "https://github.com/jmglov/blambda.git"
-         :git/sha "b9a8b32c41e72ca3619e8b7ab839eebfb133d79c"}}
+         :git/tag "v0.1.0"
+         :git/sha "b80ac1d"}}
  :tasks
  {:requires ([blambda.cli :as blambda])
   blambda {:doc "Controls Blambda runtime and layers"
