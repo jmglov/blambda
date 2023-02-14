@@ -6,7 +6,14 @@
             [clojure.string :as str]))
 
 (def specs
-  {:bb-arch
+  {:backend
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
+    :desc "Backend to use (for experimental JVM support; BE CAREFUL!)"
+    :ref "<backend>"
+    :default "bb"
+    :values #{"bb" "jvm"}}
+
+   :bb-arch
    {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Architecture to target (use amd64 if you don't care)"
     :ref "<arch>"
@@ -36,6 +43,19 @@
     :ref "<files>"
     :coerce []
     :default []}
+
+   :jvm-arch
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
+    :desc "Architecture to target (use amd64 if you don't care)"
+    :ref "<arch>"
+    :default "amd64"
+    :values #{"amd64" "arm64"}}
+
+   :jvm-version
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
+    :desc "Java version if using JVM backend (Eclipse Temurin release)"
+    :ref "<version>"
+    :default "19.0.2_7"}
 
    :lambda-handler
    {:cmds #{:terraform-write-config}

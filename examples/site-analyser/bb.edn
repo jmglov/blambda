@@ -1,10 +1,10 @@
 {:paths ["."]
  :deps {net.jmglov/blambda
-        {:git/url "https://github.com/jmglov/blambda.git"
+        #_{:git/url "https://github.com/jmglov/blambda.git"
          :git/tag "v0.1.0"
          :git/sha "b80ac1d"}
         #_"For local development, use this instead:"
-        #_{:local/root "../.."}
+        {:local/root "../.."}
         }
  :tasks
  {:requires ([blambda.cli :as blambda])

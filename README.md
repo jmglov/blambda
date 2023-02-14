@@ -222,7 +222,7 @@ bb blambda terraform apply
 ```
 
 To deploy an arm64 runtime so that you can use [AWS Graviton 2
-lamdbas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-arm-based-aws-graviton2-processors/)
+lambdas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-arm-based-aws-graviton2-processors/)
 (which AWS say will give you up to "34%" better price performance), run:
 
 ``` sh

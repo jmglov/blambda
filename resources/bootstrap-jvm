@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -e
+
+# For local debugging
+if [ -n "$LOCAL_LAYERS_DIR" ]; then
+  LAYERS_DIR=$LOCAL_LAYERS_DIR
+  DEPS_CLASSPATH_FILE="$LAYERS_DIR/deps-local-classpath"
+else
+  LAYERS_DIR=/opt
+  DEPS_CLASSPATH_FILE="$LAYERS_DIR/deps-classpath"
+fi
+
+
+CLASSPATH=$LAMBDA_TASK_ROOT
+if [ -e $DEPS_CLASSPATH_FILE ]; then
+  CLASSPATH="$CLASSPATH:`cat $DEPS_CLASSPATH_FILE`"
+fi
+
+export GITLIBS=$LAYERS_DIR/gitlibs
+
+echo "Starting JRE:"
+echo "$LAYERS_DIR/bin/java -cp $CLASSPATH clojure.main $LAYERS_DIR/bootstrap.clj"
+
+$LAYERS_DIR/bin/java -cp $CLASSPATH clojure.main $LAYERS_DIR/bootstrap.clj

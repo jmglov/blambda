@@ -1,0 +1,2 @@
+{:deps {cheshire/cheshire {:mvn/version "5.11.0"}
+        http-kit/http-kit {:mvn/version "2.6.0"}}}

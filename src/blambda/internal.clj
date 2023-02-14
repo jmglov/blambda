@@ -10,6 +10,13 @@
             "linux-aarch64-static"
             "linux-amd64-static")))
 
+(defn jvm-filename [jvm-version jvm-arch]
+  (format "OpenJDK19U-jre_%s_linux_hotspot_%s.tar.gz"
+          (if (= "arm64" jvm-arch)
+            "aarch64"
+            "linux-amd64-static")
+          jvm-version))
+
 (defn bb-url [bb-version filename]
   (format "https://github.com/babashka/babashka/releases/download/v%s/%s"
           bb-version filename))
@@ -51,13 +58,15 @@
 (defn copy-files! [{:keys [source-dir work-dir resource?] :as opts}
                    filenames]
   (doseq [f filenames
-          :let [source-file (cond
+          :let [[f dst-f] (if (vector? f) f [f f])
+                source-file (cond
                               resource? (io/resource f)
                               source-dir (fs/file source-dir f)
                               :else f)
-                parent (fs/parent f)]]
-    (println "Adding file:" (str f))
+                dest-file (fs/file work-dir dst-f)
+                parent (fs/parent dest-file)]]
+    (println "Adding file:" (str f) "->" (str dst-f))
     (when parent
       (fs/create-dirs parent))
-    (fs/delete-if-exists (fs/file work-dir f))
-    (fs/copy source-file work-dir)))
+    (fs/delete-if-exists dest-file)
+    (fs/copy source-file dest-file)))

@@ -8,6 +8,37 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
+(defn write-classpath! [{:keys [deps-path work-dir] :as opts}]
+  (let [gitlibs-dir "gitlibs"
+        m2-dir "m2-repo"
+        deps (->> deps-path slurp edn/read-string :deps)]
+    (fs/create-dirs work-dir)
+    (println "deps file:" (str (fs/file work-dir "deps.edn")))
+    (spit (fs/file work-dir "deps.edn")
+          {:deps deps
+           :mvn/local-repo (str m2-dir)})
+    (println "deps:" (slurp (fs/file work-dir "deps.edn")))
+    (let [classpath-file (fs/file work-dir "deps-classpath")
+          local-classpath-file (fs/file work-dir "deps-local-classpath")
+          deps-base-dir (str (fs/path (fs/cwd) work-dir))
+          classpath
+          (with-out-str
+            (clojure ["-Spath"]
+                     {:dir work-dir
+                      :env (assoc (into {} (System/getenv))
+                                  "GITLIBS" (str gitlibs-dir))}))
+          deps-classpath (str/replace classpath deps-base-dir "/opt")]
+      (println "Classpath before transforming:" classpath)
+      (println "Classpath after transforming:" deps-classpath)
+      (spit classpath-file deps-classpath)
+      (spit local-classpath-file classpath)
+      {:deps-classpath deps-classpath
+       :classpath classpath
+       :classpath-file classpath-file
+       :local-classpath-file local-classpath-file
+       :gitlibs-dir gitlibs-dir
+       :m2-dir m2-dir})))
+
 (defn build-deps-layer
   "Builds layer for dependencies"
   [{:keys [error deps-path target-dir work-dir] :as opts}]
@@ -19,68 +50,70 @@
         (println "\nBuilding dependencies layer:" (str deps-zipfile))
         (fs/create-dirs target-dir work-dir)
 
-        (let [gitlibs-dir "gitlibs"
-              m2-dir "m2-repo"
-              deps (->> deps-path slurp edn/read-string :deps)]
-
-          (spit (fs/file work-dir "deps.edn")
-                {:deps deps
-                 :mvn/local-repo (str m2-dir)})
-
-          (let [classpath-file (fs/file work-dir "deps-classpath")
-                local-classpath-file (fs/file work-dir "deps-local-classpath")
-                deps-base-dir (str (fs/path (fs/cwd) work-dir))
-                classpath
-                (with-out-str
-                  (clojure ["-Spath"]
-                           {:dir work-dir
-                            :env (assoc (into {} (System/getenv))
-                                        "GITLIBS" (str gitlibs-dir))}))
-                deps-classpath (str/replace classpath deps-base-dir "/opt")]
-            (println "Classpath before transforming:" classpath)
-            (println "Classpath after transforming:" deps-classpath)
-            (spit classpath-file deps-classpath)
-            (spit local-classpath-file classpath)
-
-            (println "Compressing dependencies layer:" (str deps-zipfile))
-            (shell {:dir work-dir}
-                   "zip -r" deps-zipfile
-                   (fs/file-name gitlibs-dir)
-                   (fs/file-name m2-dir)
-                   (fs/file-name classpath-file))))))))
+        (let [{:keys [gitlibs-dir m2-dir classpath-file]} (write-classpath! opts)]
+          (println "Compressing dependencies layer:" (str deps-zipfile))
+          (shell {:dir work-dir}
+                 "zip -r" deps-zipfile
+                 (fs/file-name gitlibs-dir)
+                 (fs/file-name m2-dir)
+                 (fs/file-name classpath-file)))))))
 
 (defn build-runtime-layer
   "Builds custom runtime layer"
-  [{:keys [bb-arch bb-version target-dir work-dir]
+  [{:keys [backend bb-arch bb-version jvm-arch jvm-version target-dir work-dir]
     :as opts}]
-  (let [runtime-zipfile (lib/runtime-zipfile opts)
+  (let [jvm-backend? (= "jvm" backend)
+        runtime-zipfile (lib/runtime-zipfile opts)
         bb-filename (lib/bb-filename bb-version bb-arch)
         bb-url (lib/bb-url bb-version bb-filename)
-        bb-tarball (format "%s/%s" work-dir bb-filename)]
-    (if (and (fs/exists? bb-tarball)
-             (empty? (fs/modified-since runtime-zipfile bb-tarball)))
-      (println "\nNot rebuilding custom runtime layer; no changes to bb version or arch since last built")
+        bb-tarball (format "%s/%s" work-dir bb-filename)
+        jvm-filename (lib/jvm-filename jvm-version jvm-arch)
+        jvm-tarball (format "%s/%s" work-dir jvm-filename)
+        tarball (if jvm-backend? jvm-tarball bb-tarball)]
+    (if (and (fs/exists? tarball)
+             (empty? (fs/modified-since runtime-zipfile tarball)))
+      (println "\nNot rebuilding custom runtime layer; no changes to backend version or arch since last built")
       (do
         (println "\nBuilding custom runtime layer:" (str runtime-zipfile))
         (doseq [dir [target-dir work-dir]]
           (fs/create-dirs dir))
 
-        (when-not (fs/exists? bb-tarball)
-          (println "Downloading" bb-url)
-          (io/copy
-           (:body (curl/get bb-url {:as :bytes}))
-           (io/file bb-tarball)))
+        (when-not (fs/exists? tarball)
+          (if jvm-backend?
+            (do
+              (println (str "\nDownloading JRE not currently supported"
+                            "\nVisit https://adoptium.net/temurin/releases/ to download manually"))
+              ;; Throw for now since we're REPL-driving development
+              #_(System/exit 1)
+              (throw (ex-info "No can download" {})))
+            (do
+              (println "Downloading" bb-url)
+              (io/copy
+               (:body (curl/get bb-url {:as :bytes}))
+               (io/file tarball)))))
 
-        (println "Decompressing" bb-tarball "to" work-dir)
-        (shell "tar -C" work-dir "-xzf" bb-tarball)
+        (println "Decompressing" tarball "to" work-dir)
+        (shell "tar -C" work-dir "--strip-components=1" "-xzf" tarball)
 
         (lib/copy-files! (assoc opts :resource? true)
-                         ["bootstrap" "bootstrap.clj"])
+                         [[(if jvm-backend? "bootstrap-jvm" "bootstrap") "bootstrap"]
+                          "bootstrap.clj"])
 
         (println "Compressing custom runtime layer:" (str runtime-zipfile))
-        (shell {:dir work-dir}
-               "zip" runtime-zipfile
-               "bb" "bootstrap" "bootstrap.clj")))))
+        (let [dep-files (when jvm-backend?
+                          (let [{:keys [gitlibs-dir m2-dir classpath-file]}
+                                (write-classpath! (assoc opts :deps-path (io/resource "jvm-runtime-deps.edn")))]
+                            [(fs/file-name gitlibs-dir)
+                             (fs/file-name m2-dir)
+                             (fs/file-name classpath-file)]))
+              files (concat ["bootstrap" "bootstrap.clj"]
+                            (if jvm-backend?
+                              (concat ["bin" "conf" "lib"] dep-files)
+                              ["bb"]))]
+          (apply shell
+                 {:dir work-dir}
+                 "zip" "-r" runtime-zipfile
+                 files))))))
 
 (defn build-lambda [{:keys [lambda-name source-dir source-files
                             target-dir work-dir] :as opts}]
