@@ -6,7 +6,14 @@
             [clojure.string :as str]))
 
 (def specs
-  {:backend
+  {:arch
+   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
+    :desc "Architecture to target (use amd64 if you don't care)"
+    :ref "<arch>"
+    :default "amd64"
+    :values #{"amd64" "arm64"}}
+
+   :backend
    {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Backend to use (for experimental JVM support; BE CAREFUL!)"
     :ref "<backend>"
@@ -15,7 +22,7 @@
 
    :bb-arch
    {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
-    :desc "Architecture to target (use amd64 if you don't care)"
+    :desc "[DEPRECATED: use --arch instead] Architecture to target"
     :ref "<arch>"
     :default "amd64"
     :values #{"amd64" "arm64"}}
@@ -43,13 +50,6 @@
     :ref "<files>"
     :coerce []
     :default []}
-
-   :jvm-arch
-   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
-    :desc "Architecture to target (use amd64 if you don't care)"
-    :ref "<arch>"
-    :default "amd64"
-    :values #{"amd64" "arm64"}}
 
    :jvm-version
    {:cmds #{:build-runtime-layer :build-all :terraform-write-config}

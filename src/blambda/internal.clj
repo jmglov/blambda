@@ -3,10 +3,10 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(defn bb-filename [bb-version bb-arch]
+(defn bb-filename [bb-version arch]
   (format "babashka-%s-%s.tar.gz"
           bb-version
-          (if (= "arm64" bb-arch)
+          (if (= "arm64" arch)
             "linux-aarch64-static"
             "linux-amd64-static")))
 
@@ -34,14 +34,14 @@
 (defn deps-zipfile [{:keys [deps-layer-name] :as opts}]
   (zipfile opts deps-layer-name))
 
-(defn runtime-layer-architectures [{:keys [bb-arch]}]
-  (if (= "amd64" bb-arch)
+(defn runtime-layer-architectures [{:keys [arch]}]
+  (if (= "amd64" arch)
     ["x86_64"]
     ["arm64"]))
 
-(defn runtime-layer-runtimes [{:keys [bb-arch]}]
+(defn runtime-layer-runtimes [{:keys [arch]}]
   (concat ["provided.al2"]
-          (when (= "amd64" bb-arch)
+          (when (= "amd64" arch)
             ["provided"])))
 
 (defn deps-layer-architectures [_opts]

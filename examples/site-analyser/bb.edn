@@ -9,7 +9,7 @@
  :tasks
  {:requires ([blambda.cli :as blambda])
   :init (do
-          (def config {:bb-arch "arm64"
+          (def config {:arch "arm64"
                        :deps-layer-name "site-analyser-example-deps"
                        :lambda-name "site-analyser-example"
                        :lambda-handler "handler/handler"

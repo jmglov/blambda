@@ -60,14 +60,14 @@
 
 (defn build-runtime-layer
   "Builds custom runtime layer"
-  [{:keys [backend bb-arch bb-version jvm-arch jvm-version target-dir work-dir]
+  [{:keys [backend arch bb-version jvm-version target-dir work-dir]
     :as opts}]
   (let [jvm-backend? (= "jvm" backend)
         runtime-zipfile (lib/runtime-zipfile opts)
-        bb-filename (lib/bb-filename bb-version bb-arch)
+        bb-filename (lib/bb-filename bb-version arch)
         bb-url (lib/bb-url bb-version bb-filename)
         bb-tarball (format "%s/%s" work-dir bb-filename)
-        jvm-filename (lib/jvm-filename jvm-version jvm-arch)
+        jvm-filename (lib/jvm-filename jvm-version arch)
         jvm-tarball (format "%s/%s" work-dir jvm-filename)
         tarball (if jvm-backend? jvm-tarball bb-tarball)]
     (if (and (fs/exists? tarball)

@@ -71,7 +71,7 @@ bb blambda build-runtime-layer --help
 To build a custom runtime with Babashka 0.8.2 on amd64, run:
 
 ``` sh
-bb blambda build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
+bb blambda build-runtime-layer --bb-version 0.8.2 --arch arm64
 ```
 
 ### Dependencies
@@ -226,8 +226,8 @@ lambdas](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-to-
 (which AWS say will give you up to "34%" better price performance), run:
 
 ``` sh
-bb blambda build-runtime-layer --bb-arch arm64 && \
-bb blambda terraform write-config --bb-arch arm64 && \
+bb blambda build-runtime-layer --arch arm64 && \
+bb blambda terraform write-config --arch arm64 && \
 bb blambda terraform apply
 ```
 

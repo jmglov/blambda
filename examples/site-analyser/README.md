@@ -89,7 +89,7 @@ price-performance. In order to take advantage of this, we add the following to
 `config`:
 
 ``` clojure
-:bb-arch "arm64"
+:arch "arm64"
 ```
 
 This will inform Blambda to build the custom runtime using the ARM64 version of
