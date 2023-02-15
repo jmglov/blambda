@@ -283,7 +283,11 @@ Subcommands:
              (System/exit exit))
 
            :else
-           (throw e)))))))
+           (let [{:keys [cause trace]} (Throwable->map e)]
+             (println (format "Error: %s\n  %s"
+                              cause
+                              (str/join "\n  " (map (partial str/join " ") trace))))
+             (System/exit 1))))))))
 
 (defn -main [& args]
   (apply dispatch {} args))
