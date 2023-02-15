@@ -102,7 +102,8 @@
         (println "Compressing custom runtime layer:" (str runtime-zipfile))
         (let [dep-files (when jvm-backend?
                           (let [{:keys [gitlibs-dir m2-dir classpath-file]}
-                                (write-classpath! (assoc opts :deps-path (io/resource "jvm-runtime-deps.edn")))]
+                                (write-classpath! (assoc opts :deps-path
+                                                         (io/resource "jvm-backend-runtime-deps.edn")))]
                             [(fs/file-name gitlibs-dir)
                              (fs/file-name m2-dir)
                              (fs/file-name classpath-file)]))

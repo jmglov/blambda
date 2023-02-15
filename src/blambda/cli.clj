@@ -14,7 +14,7 @@
     :values #{"amd64" "arm64"}}
 
    :backend
-   {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
+   {:cmds #{:build-runtime-layer :build-all}
     :desc "Backend to use (for experimental JVM support; BE CAREFUL!)"
     :ref "<backend>"
     :default "bb"
