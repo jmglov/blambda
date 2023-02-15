@@ -1,0 +1,20 @@
+{:paths ["."]
+ :deps {net.jmglov/blambda
+        {:git/url "https://github.com/jmglov/blambda.git"
+         :git/tag "v0.1.0"
+         :git/sha "b80ac1d"}
+        #_"For local development, use this instead:"
+        #_{:local/root "../.."}
+        }
+ :tasks
+ {:requires ([blambda.cli :as blambda])
+
+  blambda {:doc "Controls Blambda runtime and layers"
+           :task (blambda/dispatch
+                  {:lambda-name "hello-blambda"
+                   :lambda-handler "hello/handler"
+                   :source-files ["hello.clj"]
+                   :backend "jvm"
+                   :use-s3 true
+                   :s3-bucket "YOUR_BUCKET"
+                   :s3-artifact-path "lambda-artifacts"})}}}
