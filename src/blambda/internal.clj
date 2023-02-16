@@ -10,11 +10,11 @@
             "linux-aarch64-static"
             "linux-amd64-static")))
 
-(defn jvm-filename [jvm-version jvm-arch]
+(defn jvm-filename [jvm-version arch]
   (format "OpenJDK19U-jre_%s_linux_hotspot_%s.tar.gz"
-          (if (= "arm64" jvm-arch)
+          (if (= "arm64" arch)
             "aarch64"
-            "linux-amd64-static")
+            "x64")
           jvm-version))
 
 (defn bb-url [bb-version filename]

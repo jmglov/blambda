@@ -82,9 +82,13 @@
 
         (when-not (fs/exists? tarball)
           (if jvm-backend?
-            (throw (ex-info (str "\nDownloading JRE not currently supported"
-                                 "\nVisit https://adoptium.net/temurin/releases/ to download manually")
-                            {:type :blambda/error}))
+            (throw
+             (ex-info
+              (format (str "\nDownloading JRE not currently supported."
+                           "\nVisit https://adoptium.net/temurin/releases/ to download %s manually,"
+                           "\nthen copy to %s")
+                      (fs/file-name tarball) tarball)
+              {:type :blambda/error}))
             (do
               (println "Downloading" bb-url)
               (io/copy
