@@ -3,7 +3,8 @@
             [blambda.api :as api]
             [blambda.api.terraform :as api.terraform]
             [clojure.set :as set]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [sci.core :as sci]))
 
 (def specs
   {:arch
@@ -283,10 +284,8 @@ Subcommands:
              (System/exit exit))
 
            :else
-           (let [{:keys [cause trace]} (Throwable->map e)]
-             (println (format "Error: %s\n  %s"
-                              cause
-                              (str/join "\n  " (map (partial str/join " ") trace))))
+           (do
+             (prn (-> e sci/stacktrace sci/format-stacktrace))
              (System/exit 1))))))))
 
 (defn -main [& args]
