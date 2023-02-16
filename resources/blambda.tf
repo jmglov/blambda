@@ -20,6 +20,7 @@ variable "lambda_name" {}
 variable "lambda_handler" {}
 variable "lambda_filename" {}
 variable "lambda_memory_size" {}
+variable "lambda_timeout" {}
 variable "lambda_runtime" {}
 variable "lambda_architectures" {}
 {% if use-s3 %}
@@ -78,6 +79,7 @@ resource "aws_lambda_function" "lambda" {
 {% endif %}
   handler = var.lambda_handler
   memory_size = var.lambda_memory_size
+  timeout = var.lambda_timeout
   source_code_hash = filebase64sha256(var.lambda_filename)
 {% if use-s3 %}
   s3_bucket = aws_s3_object.lambda.bucket

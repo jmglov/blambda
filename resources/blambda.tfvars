@@ -36,6 +36,7 @@ lambda_name = "{{lambda-name}}"
 lambda_handler = "{{lambda-handler}}"
 lambda_filename = "{{lambda-filename}}"
 lambda_memory_size = "{{lambda-memory-size}}"
+lambda_timeout = "{{lambda-timeout}}"
 lambda_runtime = "{{lambda-runtime}}"
 lambda_architectures = ["{{lambda-architecture}}"]
 {% if use-s3 %}
