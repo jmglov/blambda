@@ -7,8 +7,6 @@
          '[cheshire.core :as cheshire])
 
 (def handler-name (System/getenv "_HANDLER"))
-(println "Loading babashka lambda handler:" handler-name)
-
 (def runtime-api-url (str "http://" (System/getenv "AWS_LAMBDA_RUNTIME_API") "/2018-06-01/runtime/"))
 
 (defn throwable->error-body [t]
@@ -20,15 +18,18 @@
 (def handler
   (let [[handler-ns handler-fn] (str/split handler-name #"/")]
     (try
+      (println "Loading babashka lambda handler:" handler-name)
       (require (symbol handler-ns))
       (resolve (symbol handler-ns handler-fn))
       (catch Throwable t
-        (println "Unable to run initialize handler fn " handler-fn "in namespace" handler-ns
+        (println "Unable to run initialize handler fn" handler-fn "in namespace" handler-ns
                  "\nthrow: " t)
         (http/post (str runtime-api-url "init/error")
                    {:body (cheshire/encode
                            (throwable->error-body t))})
         nil))))
+
+(println "Handler loaded:" handler)
 
 (when-not handler
   (http/post (str runtime-api-url "init/error")
