@@ -20,6 +20,11 @@
              :num-days (util/->int (get-env "NUM_DAYS" "7"))
              :num-top-urls (util/->int (get-env "NUM_TOP_URLS" "10"))})
 
+#_(def config {:aws-region (get-env "AWS_REGION" "eu-west-1")
+             :views-table "site-analyser-example"
+             :num-days (util/->int (get-env "NUM_DAYS" "7"))
+             :num-top-urls (util/->int (get-env "NUM_TOP_URLS" "10"))})
+
 (def client (page-views/client config))
 
 (defn serve-dashboard [{:keys [queryStringParameters] :as event}]
@@ -80,6 +85,13 @@
         (util/log "Missing required query param" {:param "url"})
         {:statusCode 400
          :body "Missing required query param: url"}))))
+
+(comment
+
+  (page-views/increment! client "2023-02-16" "https://example.com/test-repl.html")
+  ;; => {:date "2023-02-16", :url "https://example.com/test-repl.html", :new-counter 1}
+
+  )
 
 (defn handler [{:keys [requestContext] :as event} _context]
   (prn {:msg "Invoked with event"

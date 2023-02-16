@@ -288,3 +288,24 @@ deploying:
 bb blambda terraform write-config
 bb blambda terraform import-artifacts-bucket
 ```
+
+## JVM backend
+
+If you'd like to use the JVM backend instead of Babashka, you'll need to first
+download the [Eclipse
+Temurin](https://adoptium.net/temurin/releases/?version=19) JRE. After doing
+that, run:
+
+``` sh
+mkdir -p .work
+cp /path/to/OpenJDK19U-jre_aarch64_linux_hotspot_19.0.2_7.tar.gz .work/
+
+bb blambda build-all --backend jvm --deps-path src/deps.edn
+bb blambda terraform write-config --backend jvm --deps-path src/deps.edn \
+  --lambda-memory-size 2048 --lamdba-timeout 120
+
+# If using an existing bucket, import it so that Terraform won't try to recreate it
+bb blambda terraform import-artifacts-bucket
+
+bb blambda terraform apply
+```

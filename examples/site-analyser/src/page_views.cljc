@@ -1,5 +1,6 @@
 (ns page-views
-  (:require [com.grzm.awyeah.client.api :as aws]
+  (:require #?(:bb [com.grzm.awyeah.client.api :as aws]
+               :clj [cognitect.aws.client.api :as aws])
             [util :refer [->map]]))
 
 (defn client [{:keys [aws-region] :as config}]

@@ -19,7 +19,7 @@
                                       ;; Clojure sources
                                       "handler.clj"
                                       "favicon.clj"
-                                      "page_views.clj"
+                                      "page_views.cljc"
                                       "util.clj"
 
                                       ;; HTML templates

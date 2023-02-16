@@ -8,7 +8,7 @@ output "function_url" {
 }
 
 resource "aws_dynamodb_table" "site_analyser" {
-  name = "site-analyser"
+  name = "site-analyser-example"
   billing_mode = "PAY_PER_REQUEST"
   hash_key = "date"
   range_key = "url"
