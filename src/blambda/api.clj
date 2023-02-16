@@ -8,7 +8,9 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(defn write-classpath! [{:keys [deps-path work-dir] :as opts}]
+(defn write-classpath! [{:keys [deps-path work-dir classpath-type]
+                         :or {classpath-type "deps"}
+                         :as opts}]
   (let [gitlibs-dir "gitlibs"
         m2-dir "m2-repo"
         deps (->> deps-path slurp edn/read-string :deps)]
@@ -18,8 +20,8 @@
           {:deps deps
            :mvn/local-repo (str m2-dir)})
     (println "deps:" (slurp (fs/file work-dir "deps.edn")))
-    (let [classpath-file (fs/file work-dir "deps-classpath")
-          local-classpath-file (fs/file work-dir "deps-local-classpath")
+    (let [classpath-file (fs/file work-dir (format "%s-classpath" classpath-type))
+          local-classpath-file (fs/file work-dir (format "%s-local-classpath" classpath-type))
           deps-base-dir (str (fs/path (fs/cwd) work-dir))
           classpath
           (with-out-str
@@ -80,12 +82,9 @@
 
         (when-not (fs/exists? tarball)
           (if jvm-backend?
-            (do
-              (println (str "\nDownloading JRE not currently supported"
-                            "\nVisit https://adoptium.net/temurin/releases/ to download manually"))
-              ;; Throw for now since we're REPL-driving development
-              #_(System/exit 1)
-              (throw (ex-info "No can download" {})))
+            (throw (ex-info (str "\nDownloading JRE not currently supported"
+                                 "\nVisit https://adoptium.net/temurin/releases/ to download manually")
+                            {:type :blambda/error}))
             (do
               (println "Downloading" bb-url)
               (io/copy
@@ -102,8 +101,10 @@
         (println "Compressing custom runtime layer:" (str runtime-zipfile))
         (let [dep-files (when jvm-backend?
                           (let [{:keys [gitlibs-dir m2-dir classpath-file]}
-                                (write-classpath! (assoc opts :deps-path
-                                                         (io/resource "jvm-backend-runtime-deps.edn")))]
+                                (write-classpath!
+                                 (assoc opts
+                                        :deps-path (io/resource "jvm-backend-runtime-deps.edn")
+                                        :classpath-type "runtime"))]
                             [(fs/file-name gitlibs-dir)
                              (fs/file-name m2-dir)
                              (fs/file-name classpath-file)]))
