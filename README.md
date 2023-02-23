@@ -68,10 +68,10 @@ To see what the default Babashka version and platform are, run:
 bb blambda build-runtime-layer --help
 ```
 
-To build a custom runtime with Babashka 0.8.2 on amd64, run:
+To build a custom runtime with Babashka 1.1.173 on amd64, run:
 
 ``` sh
-bb blambda build-runtime-layer --bb-version 0.8.2 --bb-arch arm64
+bb blambda build-runtime-layer --bb-version 1.1.173 --bb-arch arm64
 ```
 
 ### Dependencies
