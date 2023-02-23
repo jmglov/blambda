@@ -43,8 +43,7 @@
   []
   (let [{:keys [headers body]}
         (http/get (str runtime-api-url "invocation/next")
-                  {:timeout timeout-ms
-                   :as :text})
+                  {:timeout timeout-ms})
         id (:lambda-runtime-aws-request-id headers)]
     {:event (cheshire/decode body keyword)
      :context headers
