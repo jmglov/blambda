@@ -2,7 +2,7 @@
 ;;
 ;;  The bootstrap shell script will run this
 
-(require '[org.httpkit.client :as http]
+(require '[babashka.http-client :as http]
          '[clojure.string :as str]
          '[cheshire.core :as cheshire])
 
@@ -42,21 +42,21 @@
   "Get the next invocation, returns payload and fn to respond."
   []
   (let [{:keys [headers body]}
-        @(http/get (str runtime-api-url "invocation/next")
-                   {:timeout timeout-ms
-                    :as :text})
+        (http/get (str runtime-api-url "invocation/next")
+                  {:timeout timeout-ms
+                   :as :text})
         id (:lambda-runtime-aws-request-id headers)]
     {:event (cheshire/decode body keyword)
      :context headers
      :send-response!
      (fn [response]
-       @(http/post (str runtime-api-url "invocation/" id "/response")
-                   {:body (cheshire/encode response)}))
+       (http/post (str runtime-api-url "invocation/" id "/response")
+                  {:body (cheshire/encode response)}))
      :send-error!
      (fn [thrown]
-       @(http/post (str runtime-api-url "invocation/" id "/error")
-                   {:body (cheshire/encode
-                           (throwable->error-body thrown))}))}))
+       (http/post (str runtime-api-url "invocation/" id "/error")
+                  {:body (cheshire/encode
+                          (throwable->error-body thrown))}))}))
 
 (when handler
   (println "Starting babashka lambda event loop")

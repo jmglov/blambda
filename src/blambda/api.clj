@@ -1,6 +1,6 @@
 (ns blambda.api
   (:require [babashka.deps :refer [clojure]]
-            [babashka.curl :as curl]
+            [babashka.http-client :as http]
             [babashka.fs :as fs]
             [babashka.process :refer [shell]]
             [blambda.internal :as lib]
@@ -68,7 +68,7 @@
         (when-not (fs/exists? bb-tarball)
           (println "Downloading" bb-url)
           (io/copy
-           (:body (curl/get bb-url {:as :bytes}))
+           (:body (http/get bb-url {:as :stream}))
            (io/file bb-tarball)))
 
         (println "Decompressing" bb-tarball "to" work-dir)
