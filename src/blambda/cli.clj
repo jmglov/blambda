@@ -17,7 +17,7 @@
    {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Babashka version"
     :ref "<version>"
-    :default "1.0.168"}
+    :default "1.1.173 "}
 
    :deps-layer-name
    {:cmds #{:build-deps-layer :build-all :terraform-write-config}
