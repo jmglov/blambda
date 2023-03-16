@@ -14,7 +14,8 @@
   (selmer/render (slurp (io/resource "lambda_layer.tf")) opts))
 
 (defn generate-vars
-  [{:keys [s3-artifact-path target-dir use-s3 deps-layer-name] :as opts}]
+  [{:keys [s3-artifact-path target-dir use-s3 deps-layer-name
+           skip-compatible-architectures] :as opts}]
   (let [runtime-zipfile (lib/runtime-zipfile opts)
         runtime-filename (fs/file-name runtime-zipfile)
         lambda-zipfile (lib/lambda-zipfile opts)
@@ -24,8 +25,9 @@
     (selmer/render
      (slurp (io/resource "blambda.tfvars"))
      (merge opts
-            {:runtime-layer-compatible-architectures (lib/runtime-layer-architectures opts)
-             :runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
+            (when-not skip-compatible-architectures
+              {:runtime-layer-compatible-architectures (lib/runtime-layer-architectures opts)})
+            {:runtime-layer-compatible-runtimes (lib/runtime-layer-runtimes opts)
              :runtime-layer-filename runtime-zipfile
              :lambda-filename lambda-zipfile
              :lambda-architecture (first (lib/runtime-layer-architectures opts))}
@@ -33,8 +35,9 @@
               {:lambda-s3-key (lib/s3-artifact opts lambda-filename)
                :runtime-layer-s3-key (lib/s3-artifact opts runtime-filename)})
             (when deps-layer-name
-              {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)
-               :deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
+              (when-not skip-compatible-architectures
+                {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)})
+              {:deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
                :deps-layer-filename deps-zipfile})
             (when (and deps-layer-name use-s3)
               {:deps-layer-s3-key (lib/s3-artifact opts deps-filename)})))))

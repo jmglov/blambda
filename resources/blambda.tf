@@ -1,5 +1,7 @@
 variable "runtime_layer_name" {}
+{% if not skip-compatible-architectures %}
 variable "runtime_layer_compatible_architectures" {}
+{% endif %}
 variable "runtime_layer_compatible_runtimes" {}
 variable "runtime_layer_filename" {}
 {% if use-s3 %}
@@ -8,7 +10,9 @@ variable "runtime_layer_s3_key" {}
 {% endif %}
 {% if deps-layer-name %}
 variable "deps_layer_name" {}
+{% if not skip-compatible-architectures %}
 variable "deps_layer_compatible_architectures" {}
+{% endif %}
 variable "deps_layer_compatible_runtimes" {}
 variable "deps_layer_filename" {}
 {% if use-s3 %}
@@ -43,7 +47,9 @@ module "runtime" {
   source = "./{{tf-module-dir}}"
 
   layer_name = var.runtime_layer_name
+{% if not skip-compatible-architectures %}
   compatible_architectures = var.runtime_layer_compatible_architectures
+{% endif %}
   compatible_runtimes = var.runtime_layer_compatible_runtimes
   filename = var.runtime_layer_filename
 {% if use-s3 %}
@@ -57,7 +63,9 @@ module "deps" {
   source = "./{{tf-module-dir}}"
 
   layer_name = var.deps_layer_name
+{% if not skip-compatible-architectures %}
   compatible_architectures = var.deps_layer_compatible_architectures
+{% endif %}
   compatible_runtimes = var.deps_layer_compatible_runtimes
   filename = var.deps_layer_filename
 {% if use-s3 %}

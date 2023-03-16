@@ -1,9 +1,11 @@
 runtime_layer_name = "{{runtime-layer-name}}"
+{% if not skip-compatible-architectures %}
 runtime_layer_compatible_architectures = [
   {% for a in runtime-layer-compatible-architectures %}
   "{{a}}",
   {% endfor %}
 ]
+{% endif %}
 runtime_layer_compatible_runtimes = [
   {% for r in runtime-layer-compatible-runtimes %}
   "{{r}}",
@@ -17,11 +19,14 @@ runtime_layer_s3_key = "{{runtime-layer-s3-key}}"
 
 {% if deps-layer-name %}
 deps_layer_name = "{{deps-layer-name}}"
+{% if not skip-compatible-architectures %}
 deps_layer_compatible_architectures = [
   {% for a in deps-layer-compatible-architectures %}
   "{{a}}",
   {% endfor %}
 ]
+{% endif %}
+
 deps_layer_compatible_runtimes = [
   {% for r in deps-layer-compatible-runtimes %}
   "{{r}}",
