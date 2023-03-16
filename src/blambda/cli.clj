@@ -89,6 +89,11 @@
     :desc "Bucket to use for S3 artifacts (if using S3)"
     :ref "<bucket>"}
 
+   :skip-compatible-architectures
+   {:cmds #{:terraform-write-config}
+    :desc "Skips generating compatible_architectures stanzas when not supported"
+    :coerce :boolean}
+
    :source-dir
    {:cmds #{:build-lambda :build-all}
     :desc "Lambda source directory"
