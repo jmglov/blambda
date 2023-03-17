@@ -73,6 +73,12 @@
     :ref "<runtime>"
     :default "provided.al2"}
 
+   :lambda-timeout
+   {:cmds #{:terraform-write-config}
+    :desc "Time before the lambda function times out (in seconds)"
+    :ref "<timeout>"
+    :coerce :integer}
+
    :runtime-layer-name
    {:cmds #{:build-runtime-layer :build-all :terraform-write-config}
     :desc "Name of custom runtime layer in AWS"
