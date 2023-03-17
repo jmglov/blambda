@@ -22,6 +22,9 @@ variable "lambda_filename" {}
 variable "lambda_memory_size" {}
 variable "lambda_runtime" {}
 variable "lambda_architectures" {}
+{% if lambda-timeout %}
+variable "lambda_timeout" {}
+{% endif %}
 {% if use-s3 %}
 variable "lambda_s3_key" {}
 {% endif %}
@@ -87,6 +90,9 @@ resource "aws_lambda_function" "lambda" {
 {% endif %}
   runtime = var.lambda_runtime
   architectures = var.lambda_architectures
+{% if lambda-timeout %}
+  timeout = var.lambda_timeout
+{% endif %}
   layers = [
     module.runtime.arn,
 {% if deps-layer-name %}

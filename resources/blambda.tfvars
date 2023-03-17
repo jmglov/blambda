@@ -37,6 +37,9 @@ lambda_handler = "{{lambda-handler}}"
 lambda_filename = "{{lambda-filename}}"
 lambda_memory_size = "{{lambda-memory-size}}"
 lambda_runtime = "{{lambda-runtime}}"
+{% if lambda-timeout %}
+lambda_timeout = {{lambda-timeout}}
+{% endif %} bp
 lambda_architectures = ["{{lambda-architecture}}"]
 {% if use-s3 %}
 lambda_s3_key = "{{lambda-s3-key}}"
