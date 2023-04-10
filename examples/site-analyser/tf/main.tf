@@ -7,6 +7,13 @@ output "function_url" {
   value = aws_lambda_function_url.lambda.function_url
 }
 
+resource "aws_lambda_permission" "lambda" {
+  action = "lambda:InvokeFunctionUrl"
+  function_name = aws_lambda_function.lambda.function_name
+  principal = "*"
+  function_url_auth_type = "NONE"
+}
+
 resource "aws_dynamodb_table" "site_analyser" {
   name = "site-analyser-example"
   billing_mode = "PAY_PER_REQUEST"
