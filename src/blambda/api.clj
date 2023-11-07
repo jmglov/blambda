@@ -17,8 +17,8 @@
                        (str deps-path) (str deps-zipfile)))
       (do
         (println "\nBuilding dependencies layer:" (str deps-zipfile))
-        (fs/create-dirs target-dir work-dir)
-
+        (doseq [dir [target-dir work-dir]]
+          (fs/create-dirs dir))
         (let [gitlibs-dir "gitlibs"
               m2-dir "m2-repo"
               deps (->> deps-path slurp edn/read-string :deps)]
@@ -96,6 +96,8 @@
                source-files)
       (do
         (println "\nBuilding lambda artifact:" (str lambda-zipfile))
+        (doseq [dir [target-dir work-dir]]
+          (fs/create-dirs dir))
         (lib/copy-files! opts source-files)
         (println "Compressing lambda:" (str lambda-zipfile))
         (apply shell {:dir work-dir}
