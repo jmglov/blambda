@@ -56,9 +56,11 @@
                               resource? (io/resource f)
                               source-dir (fs/file source-dir f)
                               :else f)
-                parent (fs/parent f)]]
+                parent (if (and work-dir (fs/parent f)) (fs/file work-dir (fs/parent f)) (fs/parent f))]]
     (println "Adding file:" (str f))
     (when parent
       (fs/create-dirs parent))
     (fs/delete-if-exists (fs/file work-dir f))
-    (fs/copy source-file work-dir)))
+    (if parent
+      (fs/copy source-file parent)
+      (fs/copy source-file work-dir))))
