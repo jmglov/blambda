@@ -200,7 +200,7 @@ Subcommands:
 
 (defn mk-cmd [default-opts {:keys [cmd spec] :as cmd-opts}]
   (merge
-   cmd-opts
+   (dissoc cmd-opts :cmd)
    {:cmds (if (vector? cmd) cmd [cmd])
     :fn (fn [{:keys [opts]}]
           (when (:help opts)
