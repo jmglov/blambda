@@ -1,8 +1,8 @@
 {:paths ["."]
  :deps {net.jmglov/blambda
         {:git/url "https://github.com/jmglov/blambda.git"
-         :git/tag "v0.1.0"
-         :git/sha "b80ac1d"}
+         :git/tag "v0.2.0"
+         :git/sha "fa394bb"}
         #_"For local development, use this instead:"
         #_{:local/root "../.."}
         }
