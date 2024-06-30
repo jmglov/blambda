@@ -1,7 +1,7 @@
-# Blambda example: listing S3 objects
+# Blambda example: listing S3 objects using a pod
 
-This example uses the [awyeah-api](https://github.com/grzm/awyeah-api) library
-to list objects in the S3 bucket of your choosing.
+This example uses the [tzzh/aws](https://github.com/tzzh/pod-tzzh-aws) pod to
+list objects in the S3 bucket of your choosing.
 
 ## Building and deploying
 
