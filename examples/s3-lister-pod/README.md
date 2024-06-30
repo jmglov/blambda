@@ -14,6 +14,9 @@ bb blambda terraform write-config
 bb blambda terraform apply
 ```
 
+**NOTE:** tzzh/aws is only built for AMD64, so you cannot an ARM64 lambda with
+this pod.
+
 This assumes that you have already created an IAM role with an attached policy
 that gives your lambda access to the S3 buckets you want to allow listing for,
 something like this:
