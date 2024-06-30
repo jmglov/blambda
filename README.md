@@ -238,3 +238,35 @@ Note that if you do this, you must configure your lambda as follows:
 If you prefer not to use Terraform, you can use the AWS CLI, CloudFormation, or
 the AWS console, but Blambda doesn't currently offer any tooling for those
 options.
+
+## Using pods
+
+If you want to use one of the pods in Babashka's [pods
+registry](https://github.com/babashka/pod-registry?tab=readme-ov-file), you
+should add it to your dependencies file as normal, using the `:pods` key. For
+example, to use the [tzzh/aws](https://github.com/tzzh/pod-tzzh-aws) pod, your
+`src/bb.edn` should look like this:
+
+``` clojure
+{:paths ["."]
+ :pods {tzzh/aws {:version "0.0.3"}}}
+```
+
+Since your lambda won't be invoked as a project, you won't be able to use the
+nice automatic pod loading as described in the [Babashka pods
+documentation](https://github.com/babashka/pods#in-a-babashka-project), so
+you'll need to load the exact pod version you declared in your dependencies. For
+example:
+
+``` clojure
+(ns s3
+  (:require [babashka.pods :as pods]))
+
+(pods/load-pod 'tzzh/aws "0.0.3")
+(require '[pod.tzzh.s3 :as s3])
+```
+
+This is gross and I'm sorry. 😢
+
+There is a full example of a lambda using a pod in
+[examples/s3-lister-pod](examples/s3-lister-pod).

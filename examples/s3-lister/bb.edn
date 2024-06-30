@@ -1,0 +1,19 @@
+{:paths ["."]
+ :deps {net.jmglov/blambda
+        #_{:git/url "https://github.com/jmglov/blambda.git"
+         :git/tag "v0.1.0"
+         :git/sha "b80ac1d"}
+        #_"For local development, use this instead:"
+        {:local/root "../.."}
+        }
+ :tasks
+ {:requires ([blambda.cli :as blambda])
+  :init (do
+          (def config {:deps-layer-name "s3-lister-deps"
+                       :lambda-name "s3-lister"
+                       :lambda-handler "handler/handler"
+                       :lambda-iam-role "arn:aws:iam::289341159200:role/s3-lister-role"
+                       :source-files ["handler.clj" "s3.clj"]}))
+
+  blambda {:doc "Controls Blambda runtime and layers"
+           :task (blambda/dispatch config)}}}

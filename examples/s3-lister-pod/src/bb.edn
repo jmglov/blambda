@@ -1,0 +1,2 @@
+{:paths ["."]
+ :pods {tzzh/aws {:version "0.0.3"}}}

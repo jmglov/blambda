@@ -2,11 +2,24 @@
   (:require [babashka.deps :refer [clojure]]
             [babashka.http-client :as http]
             [babashka.fs :as fs]
+            [babashka.pods :as pods]
             [babashka.process :refer [shell]]
             [blambda.internal :as lib]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]))
+
+(defn fetch-pods [{:keys [bb-arch work-dir] :as opts} pods]
+  (let [home-dir (System/getProperty "user.home")
+        os-arch (System/getProperty "os.arch")]
+    (try
+      (System/setProperty "user.home" work-dir)
+      (System/setProperty "os.arch" (if (= bb-arch "arm64") "aarch64" "amd64"))
+      (doseq [[pod {:keys [version]}] pods]
+        (pods/load-pod pod version))
+      (finally
+        (System/setProperty "user.home" home-dir)
+        (System/setProperty "os.arch" os-arch)))))
 
 (defn build-deps-layer
   "Builds layer for dependencies"
@@ -21,33 +34,42 @@
           (fs/create-dirs dir))
         (let [gitlibs-dir "gitlibs"
               m2-dir "m2-repo"
-              deps (->> deps-path slurp edn/read-string :deps)]
+              pods-dir ".babashka"
+              {:keys [deps pods]} (-> deps-path slurp edn/read-string)]
+          (if (and (empty? deps) (empty? pods))
+            (println (format "\nNot building dependencies layer: no deps or pods listed in %s"
+                             (str deps-path)))
+            (do
+              (spit (fs/file work-dir "deps.edn")
+                    {:deps (or deps {})
+                     :pods (or pods {})
+                     :mvn/local-repo (str m2-dir)})
 
-          (spit (fs/file work-dir "deps.edn")
-                {:deps deps
-                 :mvn/local-repo (str m2-dir)})
+              (let [classpath-file (fs/file work-dir "deps-classpath")
+                    local-classpath-file (fs/file work-dir "deps-local-classpath")
+                    deps-base-dir (str (fs/path (fs/cwd) work-dir))
+                    classpath
+                    (with-out-str
+                      (clojure ["-Spath"]
+                               {:dir work-dir
+                                :env (assoc (into {} (System/getenv))
+                                            "GITLIBS" (str gitlibs-dir))}))
+                    deps-classpath (str/replace classpath deps-base-dir "/opt")]
+                (println "Classpath before transforming:" classpath)
+                (println "Classpath after transforming:" deps-classpath)
+                (spit classpath-file deps-classpath)
+                (spit local-classpath-file classpath)
 
-          (let [classpath-file (fs/file work-dir "deps-classpath")
-                local-classpath-file (fs/file work-dir "deps-local-classpath")
-                deps-base-dir (str (fs/path (fs/cwd) work-dir))
-                classpath
-                (with-out-str
-                  (clojure ["-Spath"]
-                           {:dir work-dir
-                            :env (assoc (into {} (System/getenv))
-                                        "GITLIBS" (str gitlibs-dir))}))
-                deps-classpath (str/replace classpath deps-base-dir "/opt")]
-            (println "Classpath before transforming:" classpath)
-            (println "Classpath after transforming:" deps-classpath)
-            (spit classpath-file deps-classpath)
-            (spit local-classpath-file classpath)
+                (when pods
+                  (fetch-pods opts pods))
 
-            (println "Compressing dependencies layer:" (str deps-zipfile))
-            (shell {:dir work-dir}
-                   "zip -r" deps-zipfile
-                   (fs/file-name gitlibs-dir)
-                   (fs/file-name m2-dir)
-                   (fs/file-name classpath-file))))))))
+                (println "Compressing dependencies layer:" (str deps-zipfile))
+                (shell {:dir work-dir}
+                       "zip -r" deps-zipfile
+                       (fs/file-name gitlibs-dir)
+                       (fs/file-name m2-dir)
+                       (fs/file-name pods-dir)
+                       (fs/file-name classpath-file))))))))))
 
 (defn build-runtime-layer
   "Builds custom runtime layer"
