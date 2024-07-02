@@ -101,7 +101,7 @@
     :coerce :boolean}
 
    :source-dir
-   {:cmds #{:build-lambda :build-all}
+   {:cmds #{:build-deps-layer :build-lambda :build-all}
     :desc "Lambda source directory"
     :ref "<dir>"
     :default "src"}

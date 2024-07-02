@@ -9,14 +9,18 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(defn fetch-pods [{:keys [bb-arch work-dir] :as opts} pods]
+(defn fetch-pods [{:keys [bb-arch source-dir work-dir] :as opts} pods]
   (let [home-dir (System/getProperty "user.home")
         os-arch (System/getProperty "os.arch")]
     (try
       (System/setProperty "user.home" work-dir)
       (System/setProperty "os.arch" (if (= bb-arch "arm64") "aarch64" "amd64"))
-      (doseq [[pod {:keys [version]}] pods]
-        (pods/load-pod pod version))
+      (doseq [[pod {:keys [path version]}] pods]
+        (if path
+          (let [src-path (fs/file source-dir path)
+                tgt-path (fs/file work-dir path)]
+            (fs/copy src-path tgt-path))
+          (pods/load-pod pod version)))
       (finally
         (System/setProperty "user.home" home-dir)
         (System/setProperty "os.arch" os-arch)))))
@@ -64,12 +68,16 @@
                   (fetch-pods opts pods))
 
                 (println "Compressing dependencies layer:" (str deps-zipfile))
-                (shell {:dir work-dir}
-                       "zip -r" deps-zipfile
-                       (fs/file-name gitlibs-dir)
-                       (fs/file-name m2-dir)
-                       (fs/file-name pods-dir)
-                       (fs/file-name classpath-file))))))))))
+                (let [paths (concat [(fs/file-name gitlibs-dir)
+                                     (fs/file-name m2-dir)
+                                     (fs/file-name pods-dir)
+                                     (fs/file-name classpath-file)]
+                                    (->> pods
+                                         (map (fn [[_ {:keys [path]}]] path))
+                                         (remove nil?)))]
+                  (apply shell {:dir work-dir}
+                         "zip -r" deps-zipfile
+                         paths))))))))))
 
 (defn build-runtime-layer
   "Builds custom runtime layer"
