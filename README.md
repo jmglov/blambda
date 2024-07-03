@@ -270,3 +270,26 @@ This is gross and I'm sorry. 😢
 
 There is a full example of a lambda using a pod in
 [examples/s3-lister-pod](examples/s3-lister-pod).
+
+### Using a local pod
+
+Babashka also supports using pods from the local filesystem. To do this in
+Blambda, make sure your pod executable exists in your `src` directory, then
+declare it in your `src/bb.edn` like so:
+
+``` clojure
+{:paths ["."]
+ :pods {tzzh/aws {:path "./my-pod"}}}
+```
+
+Blambda will copy this pod into your deps layer at the root, meaning it will end
+up in `/opt` in the deployed lambda image. The Blambda runtime adds `/opt` to
+the `PATH` environment variable when invoking `bb`, and Babashka will [look up
+pods on the local
+filesystem](https://github.com/babashka/pods?tab=readme-ov-file#where-does-the-pod-come-from)
+using `PATH`, so you can load the pod in your lambda simply by referring to it
+by its name:
+
+``` clojure
+(pods/load-pod "my-pod")
+```

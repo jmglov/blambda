@@ -1,2 +1,10 @@
 {:paths ["."]
- :pods {tzzh/aws {:version "0.0.3"}}}
+ :pods {
+        ;; Using a pod from the registry looks like this:
+        tzzh/aws {:version "0.0.3"}
+
+        ;; Using a pod from the local filesystem looks like this
+        ;; (note that you'll need to remove or comment out the registry
+        ;; version before uncommenting this):
+        #_tzzh/aws #_{:path "./pod-tzzh-aws"}
+        }}

@@ -24,4 +24,4 @@ export GITLIBS=$LAYERS_DIR/gitlibs
 echo "Starting Babashka:"
 echo "$LAYERS_DIR/bb -cp $CLASSPATH $LAYERS_DIR/bootstrap.clj"
 
-$LAYERS_DIR/bb -cp $CLASSPATH $LAYERS_DIR/bootstrap.clj
+PATH="$PATH:$LAYERS_DIR" $LAYERS_DIR/bb -cp $CLASSPATH $LAYERS_DIR/bootstrap.clj
