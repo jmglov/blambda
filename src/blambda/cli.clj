@@ -69,9 +69,9 @@
 
    :lambda-runtime
    {:cmds #{:terraform-write-config}
-    :desc "Identifier of the function's runtime (use provided or provided.al2)"
+    :desc "Identifier of the function's runtime (use provided or provided.al2023)"
     :ref "<runtime>"
-    :default "provided.al2"}
+    :default "provided.al2023"}
 
    :lambda-timeout
    {:cmds #{:terraform-write-config}
