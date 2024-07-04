@@ -42,7 +42,7 @@
   ["x86_64" "arm64"])
 
 (defn deps-layer-runtimes [_opts]
-  ["provided" "provided.al2"])
+  ["provided" "provided.al2023"])
 
 (defn s3-artifact [{:keys [s3-artifact-path]} filename]
   (format "%s/%s"
