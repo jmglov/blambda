@@ -34,7 +34,7 @@
     ["arm64"]))
 
 (defn runtime-layer-runtimes [{:keys [bb-arch]}]
-  (concat ["provided.al2"]
+  (concat ["provided.al2023"]
           (when (= "amd64" bb-arch)
             ["provided"])))
 
