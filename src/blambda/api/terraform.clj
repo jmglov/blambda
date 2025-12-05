@@ -35,10 +35,10 @@
               {:lambda-s3-key (lib/s3-artifact opts lambda-filename)
                :runtime-layer-s3-key (lib/s3-artifact opts runtime-filename)})
             (when deps-layer-name
-              (when-not skip-compatible-architectures
-                {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)})
-              {:deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
-               :deps-layer-filename deps-zipfile})
+              (merge {:deps-layer-compatible-runtimes (lib/deps-layer-runtimes opts)
+                      :deps-layer-filename deps-zipfile}
+                     (when-not skip-compatible-architectures
+                       {:deps-layer-compatible-architectures (lib/deps-layer-architectures opts)})))
             (when (and deps-layer-name use-s3)
               {:deps-layer-s3-key (lib/s3-artifact opts deps-filename)})))))
 
