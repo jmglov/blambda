@@ -131,6 +131,12 @@
     :ref "<dir>"
     :default "modules"}
 
+   :tf-command
+   {:cmds #{:terraform-import-artifacts-bucket :terraform-apply}
+    :desc "An alternative terrafrom command (e.g. tofu)"
+    :ref "<command>"
+    :default "terraform"}
+
    :use-s3
    {:cmds #{:terraform-write-config}
     :desc "If true, use S3 for artifacts when creating layers"

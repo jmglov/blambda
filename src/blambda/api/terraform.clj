@@ -50,7 +50,7 @@
     (selmer/render (slurp (io/resource "blambda.tf"))
                    (assoc opts :lambda-env-vars env-vars))))
 
-(defn run-tf-cmd! [{:keys [tf-config-dir] :as opts} cmd]
+(defn run-tf-cmd! [{:keys [tf-config-dir tf-command] :as opts} cmd]
   (let [config-file (tf-config-path opts "blambda.tf")]
     (when-not (fs/exists? config-file)
       (throw
@@ -59,15 +59,15 @@
                 (str config-file))
         {:type :blambda/missing-file
          :filename (str config-file)})))
-    (shell {:dir (str (fs/parent config-file))} cmd)))
+    (shell {:dir (str (fs/parent config-file))} tf-command cmd)))
 
 (defn apply! [opts]
-  (run-tf-cmd! opts "terraform init")
-  (run-tf-cmd! opts "terraform apply"))
+  (run-tf-cmd! opts "init")
+  (run-tf-cmd! opts "apply"))
 
 (defn import-s3-bucket! [{:keys [s3-bucket] :as opts}]
-  (run-tf-cmd! opts "terraform init")
-  (run-tf-cmd! opts (format "terraform import aws_s3_bucket.artifacts %s" s3-bucket)))
+  (run-tf-cmd! opts "init")
+  (run-tf-cmd! opts (format "import aws_s3_bucket.artifacts %s" s3-bucket)))
 
 (defn write-config [{:keys [lambda-name tf-module-dir extra-tf-config target-dir]
                      :as opts}]
