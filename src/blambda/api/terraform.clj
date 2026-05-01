@@ -80,15 +80,14 @@
         vars-file (tf-config-path opts "blambda.auto.tfvars")
         module-dir (tf-config-path opts tf-module-dir)
         module-file (tf-config-path opts (fs/file tf-module-dir "lambda_layer.tf"))]
+    (fs/create-dirs module-dir)
     (when-not (empty? extra-tf-config)
-      (fs/create-dirs target-dir)
       (doseq [f extra-tf-config
               :let [filename (fs/file-name f)
-                    target (fs/file target-dir filename)]]
+                    target (tf-config-path opts filename)]]
         (println "Copying Terraform config" (str f))
         (fs/delete-if-exists target)
-        (fs/copy f target-dir)))
-    (fs/create-dirs module-dir)
+        (fs/copy f target)))
     (println "Writing lambda layer config:" (str config-file))
     (spit config-file lambda-layer-config)
     (println "Writing lambda layer vars:" (str vars-file))
